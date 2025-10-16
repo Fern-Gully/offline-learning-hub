@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Word Search (Offline)</title>
+<style>
+  :root{
+    --bg:#0a0f22; --bg2:#0e1533; --card:#12182a; --stroke:#1e2544;
+    --accent:#3b82f6; --accent2:#8b5cf6; --muted:#9aa4b2; --fg:#e6e9ef;
+    --good:#22c55e; --bad:#ef4444; --glass:rgba(255,255,255,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;color:var(--fg);font:16px/1.6 system-ui,Segoe UI,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,.18), transparent 60%),
+      radial-gradient(1000px 600px at 110% 20%, rgba(139,92,246,.16), transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg2));
+    background-attachment: fixed;
+  }
+  header{
+    padding:1.1rem 1rem;border-bottom:1px solid var(--stroke);
+    text-align:center;font-weight:800;letter-spacing:.02em;
+    position:sticky;top:0;backdrop-filter:saturate(140%) blur(6px);
+    background:linear-gradient(to right, rgba(16,22,38,.65), rgba(16,22,38,.35));
+    z-index:10;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:1rem 1.25rem;display:grid;gap:1rem;grid-template-columns:1fr 320px}
+  .panel{
+    background:linear-gradient(180deg, rgba(20,26,42,.96), rgba(20,26,42,.85));
+    border:1px solid var(--stroke); border-radius:16px; padding:1rem;
+    box-shadow:0 10px 24px rgba(0,0,0,.32);
+  }
+  .toolbar{display:flex;gap:.5rem;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+  .buttons{display:flex;gap:.5rem;flex-wrap:wrap}
+  button{
+    background:transparent;color:var(--fg);border:1px solid var(--accent);
+    border-radius:999px;padding:.45rem .8rem;font-weight:700;cursor:pointer;
+    transition:.15s; letter-spacing:.02em;
+  }
+  button:hover{background:rgba(59,130,246,.12)}
+  .muted{color:var(--muted)}
+  .timer{font-variant-numeric:tabular-nums}
+  .grid{
+    --N:12;
+    display:grid;grid-template-columns:repeat(var(--N), 1fr);
+    user-select:none;touch-action:none;
+    border:1px solid var(--stroke);border-radius:12px;overflow:hidden;
+  }
+  .cell{
+    aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+    font-weight:900; letter-spacing:.04em; position:relative;
+    background:linear-gradient(160deg, rgba(14,20,40,.92), rgba(14,20,40,.75));
+    border-right:1px solid rgba(255,255,255,.04);
+    border-bottom:1px solid rgba(255,255,255,.04);
+    transition:background .12s ease, color .12s ease;
+  }
+  .cell.sel{background:linear-gradient(160deg, rgba(59,130,246,.28), rgba(139,92,246,.22));}
+  .cell.found{background:linear-gradient(160deg, rgba(34,197,94,.28), rgba(34,197,94,.16)); color:#eafff1;}
+  .legend{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:1fr;gap:.35rem;max-height:70vh;overflow:auto}
+  .legend li{
+    padding:.4rem .6rem;border:1px solid var(--stroke);border-radius:999px;
+    background:var(--glass); display:flex; align-items:center; gap:.5rem; font-weight:700;
+  }
+  .legend li.done{border-color:rgba(34,197,94,.6); color:#c3f8d6}
+  .legend small{color:var(--muted);font-weight:600}
+  .stats{display:flex;gap:1rem;flex-wrap:wrap}
+  .stat{padding:.35rem .6rem;border:1px solid var(--stroke);border-radius:8px;background:var(--glass)}
+  footer{grid-column:1/-1;text-align:center;color:var(--muted);margin: .5rem 0}
+  @media (max-width:960px){ .wrap{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+  <header>🔎 Word Search</header>
+  <div class="wrap">
+    <div class="panel">
+      <div class="toolbar">
+        <div class="stats">
+          <div class="stat"><b class="timer" id="timer">00:00</b></div>
+          <div class="stat">Found: <b id="foundCount">0</b>/<span id="totalCount">0</span></div>
+          <div class="stat">Seed: <b id="seedLabel">—</b></div>
+        </div>
+        <div class="buttons">
+          <button id="shuffle">Shuffle</button>
+          <button id="newSeed">New Seed</button>
+          <button id="clearSel">Clear Select</button>
+        </div>
+      </div>
+      <div id="grid" class="grid" aria-label="Word search grid"></div>
+    </div>
+
+    <div class="panel">
+      <div class="muted" style="margin-bottom:.4rem">Find all words (forward or backward, any straight line).</div>
+      <ul id="legend" class="legend"></ul>
+      <div style="margin-top:.6rem" class="muted">
+        Tip: hold and drag across letters (mouse or touch). Use “Shuffle” to re-pack with same seed; “New Seed” for a fresh layout (also available via <code>?seed=1234</code>).
+      </div>
+    </div>
+
+    <footer>Local & offline • Pure HTML/JS • Drop-in for <code>/srv/games/www/</code></footer>
+  </div>
+
+<script>
+(() => {
+  // ----------------- Config -----------------
+  const SIZE = 12;            // grid size
+  const WORDS = [
+    "KOALA","BILBY","WATTLE","QUOKKA","EMU","WOMBAT","PLATYPUS","REEF",
+    "EUCALYPT","DINGO","GUMTREE","BUNYIP","BARRA","OUTBACK","PAVLOVA","LAMINGTON"
+  ].sort((a,b)=>a.length-b.length);
+  const ALPH = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  // ----------------- Seeded RNG -----------------
+  const url = new URL(location.href);
+  let seed = url.searchParams.get("seed");
+  if (!seed) seed = Math.floor(Math.random()*1e9).toString();
+  function xmur3(str){ let h=1779033703^str.length; for(let i=0;i<str.length;i++){ h=Math.imul(h^str.charCodeAt(i),3432918353); h=h<<13|h>>>19; } return ()=>{ h=Math.imul(h^ (h>>>16), 2246822507); h=Math.imul(h^ (h>>>13), 3266489909); return (h^=h>>>16)>>>0; } }
+  function mulberry32(a){ return function(){ let t = a += 0x6D2B79F5; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; } }
+  const rand = mulberry32(xmur3(seed)());
+
+  // ----------------- Grid & placement -----------------
+  const DIRS = [
+    [1,0],[0,1],[1,1],[-1,0],[0,-1],[-1,-1],[1,-1],[-1,1] // 8 directions
+  ];
+  function makeEmpty(n){ return Array.from({length:n},()=>Array(n).fill(null)); }
+  function canPlace(board, word, r, c, dr, dc){
+    for(let i=0;i<word.length;i++){
+      const rr=r+dr*i, cc=c+dc*i;
+      if(rr<0||cc<0||rr>=SIZE||cc>=SIZE) return false;
+      const ch = board[rr][cc];
+      if(ch && ch!==word[i]) return false;
+    }
+    return true;
+  }
+  function placeWord(board, word){
+    for(let t=0;t<800;t++){
+      const dir = DIRS[(rand()*DIRS.length)|0];
+      const r = (rand()*SIZE)|0, c=(rand()*SIZE)|0;
+      if(canPlace(board, word, r, c, dir[0], dir[1])){
+        for(let i=0;i<word.length;i++){
+          const rr=r+dir[0]*i, cc=c+dir[1]*i;
+          board[rr][cc] = word[i];
+        }
+        return {r, c, dr:dir[0], dc:dir[1]};
+      }
+    }
+    return null;
+  }
+  function fillRandom(board){
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        if(!board[r][c]){
+          board[r][c] = ALPH[(rand()*ALPH.length)|0];
+        }
+      }
+    }
+  }
+
+  // ----------------- Build puzzle -----------------
+  let placements = {}, found = new Set();
+  function build(){
+    placements = {}; found.clear();
+    const board = makeEmpty(SIZE);
+    const sorted = [...WORDS].sort((a,b)=>b.length-a.length);
+    for(const raw of sorted){
+      const orientationFlip = rand()<0.5;
+      const word = orientationFlip ? [...raw].reverse().join('') : raw;
+      const placed = placeWord(board, word);
+      if(!placed){
+        const fallback = placeWord(board, raw);
+        if(!fallback){ console.warn("Could not place:", raw); continue; }
+        placements[raw] = fallback;
+      } else {
+        placements[raw] = placed;
+      }
+    }
+    fillRandom(board);
+    return board;
+  }
+
+  // ----------------- Render -----------------
+  const gridEl = document.getElementById('grid');
+  const legendEl = document.getElementById('legend');
+  const foundCountEl = document.getElementById('foundCount');
+  const totalCountEl = document.getElementById('totalCount');
+  const seedLabelEl = document.getElementById('seedLabel');
+
+  let board = build();
+  seedLabelEl.textContent = seed;
+  totalCountEl.textContent = Object.keys(placements).length.toString();
+
+  function renderGrid(){
+    gridEl.style.setProperty('--N', SIZE);
+    gridEl.innerHTML = '';
+    for(let r=0;r<SIZE;r++){
+      for(let c=0;c<SIZE;c++){
+        const d = document.createElement('div');
+        d.className = 'cell';
+        d.dataset.r = r; d.dataset.c = c;
+        d.textContent = board[r][c];
+        gridEl.appendChild(d);
+      }
+    }
+  }
+  function renderLegend(){
+    legendEl.innerHTML = '';
+    for(const w of WORDS){
+      if(!placements[w]) continue;
+      const li = document.createElement('li');
+      li.id = 'w_'+w; li.innerHTML = `<span>${w}</span><small>(${w.length})</small>`;
+      legendEl.appendChild(li);
+    }
+  }
+  function updateFoundUI(){
+    foundCountEl.textContent = found.size;
+    for(const w of WORDS){
+      const li = document.getElementById('w_'+w);
+      if(!li) continue;
+      li.classList.toggle('done', found.has(w));
+    }
+  }
+
+  renderGrid(); renderLegend(); updateFoundUI();
+
+  // ----------------- Selection logic (FIXED) -----------------
+  let dragging = false, activePointer = null, start = null, currentLine = [];
+
+  function cellsOnLine(r0,c0,r1,c1){
+    const dr = Math.sign(r1-r0), dc = Math.sign(c1-c0);
+    if(!(dr===0 || dc===0 || Math.abs(r1-r0)===Math.abs(c1-c0))) return [];
+    const steps = Math.max(Math.abs(r1-r0), Math.abs(c1-c1)) || Math.max(Math.abs(r1-r0), Math.abs(c1-c0)); // keep types happy
+    const steps2 = Math.max(Math.abs(r1-r0), Math.abs(c1-c0));
+    const out = [];
+    for(let i=0;i<=steps2;i++) out.push([r0 + dr*i, c0 + dc*i]);
+    return out;
+  }
+  function clearSel(){
+    currentLine.forEach(([r,c])=>{
+      const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+      if(cell) cell.classList.remove('sel');
+    });
+    currentLine = [];
+  }
+  function applySel(line){
+    clearSel();
+    currentLine = line;
+    line.forEach(([r,c])=>{
+      const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+      if(cell) cell.classList.add('sel');
+    });
+  }
+  function textFrom(line){ return line.map(([r,c])=>board[r][c]).join(''); }
+  function markFound(line, word){
+    line.forEach(([r,c])=>{
+      const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+      if(cell) { cell.classList.remove('sel'); cell.classList.add('found'); }
+    });
+    found.add(word);
+    updateFoundUI();
+    if(found.size === Object.keys(placements).length){
+      document.title = "🎉 Completed! • Word Search";
+      const hdr = document.querySelector('header');
+      const old = hdr.textContent;
+      hdr.textContent = "🎉 Completed! Nice one.";
+      setTimeout(()=>{ hdr.textContent = old; }, 1500);
+    }
+  }
+  function handleEnd(line){
+    if(line.length<=1){ clearSel(); return; }
+    const s = textFrom(line);
+    const sr = [...s].reverse().join('');
+    for(const w of WORDS){
+      if(!placements[w] || found.has(w)) continue;
+      if(s===w || sr===w){
+        const p = placements[w];
+        const expect = cellsOnLine(p.r, p.c, p.r+p.dr*(w.length-1), p.c+p.dc*(w.length-1));
+        const same = expect.length === line.length && expect.every((xy,i)=> xy[0]===line[i][0] && xy[1]===line[i][1]);
+        const sameRev = expect.length === line.length && expect.every((xy,i)=> xy[0]===line[expect.length-1-i][0] && xy[1]===line[expect.length-1-i][1]);
+        if(same || sameRev){
+          markFound(line, w);
+          clearSel();
+          return;
+        }
+      }
+    }
+    clearSel();
+  }
+
+  function cellFromPoint(clientX, clientY){
+    const el = document.elementFromPoint(clientX, clientY);
+    if(!el) return null;
+    const cell = el.closest && el.closest('.cell');
+    if(!cell || !gridEl.contains(cell)) return null;
+    return [ +cell.dataset.r, +cell.dataset.c ];
+  }
+
+  // Start drag on actual cell
+  gridEl.addEventListener('pointerdown', (e)=>{
+    const startRC = cellFromPoint(e.clientX, e.clientY);
+    if(!startRC) return;
+    dragging = true; activePointer = e.pointerId; start = startRC;
+    applySel([start]);
+    // listen on window so we still track outside grid
+    window.addEventListener('pointermove', onMove, {passive:false});
+    window.addEventListener('pointerup', onUp, {passive:false, once:false});
+    window.addEventListener('pointercancel', onUp, {passive:false, once:false});
+  });
+
+  function onMove(e){
+    if(!dragging || e.pointerId !== activePointer) return;
+    const rc = cellFromPoint(e.clientX, e.clientY);
+    if(!rc) return;
+    const line = cellsOnLine(start[0], start[1], rc[0], rc[1]);
+    if(line.length) applySel(line);
+    e.preventDefault();
+  }
+
+  function onUp(e){
+    if(!dragging || e.pointerId !== activePointer) return;
+    dragging = false;
+    const rc = cellFromPoint(e.clientX, e.clientY);
+    const line = rc ? cellsOnLine(start[0], start[1], rc[0], rc[1]) : currentLine;
+    handleEnd(line);
+    activePointer = null; start = null;
+    window.removeEventListener('pointermove', onMove, {passive:false});
+    window.removeEventListener('pointerup', onUp, {passive:false});
+    window.removeEventListener('pointercancel', onUp, {passive:false});
+  }
+
+  // ----------------- Controls -----------------
+  document.getElementById('clearSel').onclick = () => clearSel();
+  document.getElementById('shuffle').onclick = () => {
+    board = build(); renderGrid(); attachCellRefs(); updateFoundUI();
+  };
+  document.getElementById('newSeed').onclick = () => {
+    const newSeed = Math.floor(Math.random()*1e9).toString();
+    url.searchParams.set('seed', newSeed);
+    location.href = url.toString();
+  };
+
+  function attachCellRefs(){
+    // keep cell UI if some words already found
+    for(const w of found){
+      const p = placements[w]; if(!p) continue;
+      const line = cellsOnLine(p.r, p.c, p.r+p.dr*(w.length-1), p.c+p.dc*(w.length-1));
+      line.forEach(([r,c])=>{
+        const cell = document.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+        if(cell) cell.classList.add('found');
+      });
+    }
+  }
+  attachCellRefs();
+
+  // ----------------- Timer -----------------
+  const timerEl = document.getElementById('timer');
+  let sCounter = 0; setInterval(()=>{ sCounter++; const m=(sCounter/60)|0, s=(sCounter%60)|0;
+    timerEl.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 1000);
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Nine Men's Morris</title>
+    <link rel="stylesheet" href="malom.css" />
+    <script src="malom.js"></script>
+  </head>
+  <body onload="init();">
+    <header>
+      <h1>Nine Men's Morris</h1>
+    </header>
+    <noscript>This game needs JavaScript.</noscript>
+    <canvas id="board" width="500" height="500">
+      This game needs a browser with HTML5 support.
+    </canvas>
+  </body>
+</html>

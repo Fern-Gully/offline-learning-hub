@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>OrbitLoom v1.1 — Gravity Puzzles</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<style>
+  :root{
+    --bg:#070b16;--bg2:#0e152b;--panel:#0d1224;--stroke:#1e2b4f;--fg:#e7ecf6;--muted:#a9b4cb;
+    --accent:#6aa9ff;--accent2:#9b7bff;--good:#2ecc71;--bad:#ff5d73;--warn:#ffc857;--glass:rgba(255,255,255,.06);
+  }
+  html,body{margin:0;height:100%;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--fg);font:14px/1.35 system-ui,Segoe UI,Roboto,Inter,Arial}
+  #root{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+  header,footer{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.15));border-bottom:1px solid var(--stroke);padding:10px 14px}
+  footer{border-top:1px solid var(--stroke);border-bottom:0}
+  h1{margin:0;font-weight:800;letter-spacing:.2px;font-size:18px;display:flex;gap:10px;align-items:center}
+  h1 .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b0f1a}
+  #game{display:grid;grid-template-columns:340px 1fr;gap:12px;padding:12px}
+  #left{background:var(--panel);border:1px solid var(--stroke);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+  #right{background:var(--panel);border:1px solid var(--stroke);border-radius:16px;padding:12px;display:grid;grid-template-rows:auto 1fr}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .btn{padding:8px 10px;border:1px solid var(--stroke);background:var(--glass);backdrop-filter:blur(6px);border-radius:10px;color:var(--fg);cursor:pointer;user-select:none}
+  .btn:hover{border-color:#4263eb}
+  .btn[disabled]{opacity:.4;pointer-events:none}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b0f1a;border-color:transparent;font-weight:800}
+  .btn.ghost{background:transparent}
+  .pill{padding:4px 8px;border-radius:999px;background:var(--glass);border:1px solid var(--stroke);font-size:12px}
+  .toolbar{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .tool{padding:10px;border:1px solid var(--stroke);background:var(--glass);border-radius:10px;text-align:center;cursor:pointer;user-select:none}
+  .tool.active{outline:2px solid var(--accent)}
+  .tool small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+  .list{display:flex;flex-direction:column;gap:6px}
+  .level{display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid var(--stroke);background:var(--glass);border-radius:10px}
+  .level.locked{opacity:.45}
+  .money{color:var(--good);font-weight:800}
+  .stars{color:var(--warn)}
+  .hint{color:var(--muted);font-size:12px}
+  .shop-card{display:flex;justify-content:space-between;gap:10px;padding:10px;border:1px solid var(--stroke);border-radius:12px;background:var(--glass)}
+  canvas{background:radial-gradient(900px 680px at 50% 50%, #0c1531 0%, #0a1126 60%, #081024 100%);border-radius:12px;border:1px solid var(--stroke);touch-action:none}
+  .k{font-family:ui-monospace,Consolas,monospace;background:#0c1226;border:1px solid var(--stroke);padding:2px 6px;border-radius:6px;font-size:12px}
+
+  /* Help overlay */
+  #help{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);z-index:50}
+  #help .card{max-width:920px;background:#0d1224;border:1px solid var(--stroke);border-radius:16px;padding:18px;box-shadow:0 14px 60px rgba(0,0,0,.45)}
+  #help h2{margin:0 0 6px 0}
+  #help li{margin:6px 0}
+  #help .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media (max-width:980px){ #game{grid-template-columns:1fr;grid-template-rows:auto auto} #help .grid{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div id="root">
+  <header><h1>OrbitLoom <span class="badge">v1.1 • gravity • offline</span></h1></header>
+
+  <main id="game">
+    <div id="left">
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <button class="btn" id="btnMenu">◀ Menu</button>
+          <span class="pill">Level <b id="levelName">—</b></span>
+        </div>
+        <div class="row">
+          <span class="pill">Status <b id="status">idle</b></span>
+          <span class="pill">Time <b id="time">0.0</b>s</span>
+          <span class="pill">Moves <b id="moves">0</b></span>
+          <span class="pill">Credits <b class="money" id="credits">0</b></span>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <button class="btn primary" id="btnLaunch">⏵ Launch</button>
+          <button class="btn" id="btnPause">⏸ Pause</button>
+          <button class="btn" id="btnReset">↺ Reset</button>
+          <button class="btn" id="btnUndo">⟲ Undo</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnHelp">❓ Help</button>
+          <button class="btn" id="btnClear">🧹 Clear Pieces</button>
+        </div>
+      </div>
+
+      <div class="row" style="justify-content:space-between">
+        <div class="row">
+          <span class="pill">Waypoints <b id="wpOk">0</b>/<b id="wpAll">0</b></span>
+          <span class="pill">Best <b id="bestScore">—</b></span>
+          <span class="pill">Stars <b id="bestStars">—</b></span>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="row"><b>Tools</b></div>
+        <div id="inv" class="toolbar"></div>
+        <div class="hint">
+          Place with click. Rotate Boosters with right-click or <span class="k">R</span>.
+          Cycle tools <span class="k">Q/E</span>. Erase with <span class="k">Del</span>.
+          Hold <span class="k">Alt</span> while placing to toggle strength <b>Low/Med/High</b>.
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="row" style="justify-content:space-between">
+          <b>Upgrades</b>
+        </div>
+        <div id="upgList" class="list"></div>
+      </div>
+
+      <details class="section" open>
+        <summary><b>Quick Guide</b></summary>
+        <div class="hint">
+          <ul style="margin:8px 0 0 16px;padding:0">
+            <li><b>Goal:</b> Hit all yellow waypoints and enter the green goal <i>under capture speed</i>.</li>
+            <li><b>Attractor</b> pulls the probe. <b>Repulsor</b> pushes it away. <b>Booster</b> adds a burst in its arrow direction when the probe enters the ring.</li>
+            <li>Use <b>Preview</b> (always on) to see a predicted path before launching.</li>
+          </ul>
+        </div>
+      </details>
+
+      <div class="section">
+        <div class="row" style="justify-content:space-between">
+          <b>Level Select</b>
+          <button class="btn ghost" id="btnNew">New Game</button>
+        </div>
+        <div id="levels" class="list"></div>
+      </div>
+    </div>
+
+    <div id="right">
+      <div class="row" style="justify-content:space-between">
+        <div class="row"><b>Field</b></div>
+        <div class="row">
+          <span class="pill">Speed <b id="speed">0</b></span>
+          <span class="pill">Capture <b id="cap">0</b></span>
+          <span class="pill">Preview <b id="predict">on</b></span>
+        </div>
+      </div>
+      <canvas id="canvas" width="960" height="640"></canvas>
+    </div>
+  </main>
+
+  <footer>
+    <div class="row" style="justify-content:space-between">
+      <div>Single-file, no libs. Saves & highscores in <span class="k">localStorage</span>.</div>
+      <div class="hint">© OrbitLoom</div>
+    </div>
+  </footer>
+</div>
+
+<!-- Help overlay -->
+<div id="help">
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 style="margin:0">How to Play</h2>
+      <button class="btn" id="closeHelp">✕</button>
+    </div>
+    <div class="grid">
+      <div>
+        <h3>Win Condition</h3>
+        <ul>
+          <li>Collect <b>all</b> yellow waypoints.</li>
+          <li>Enter the green goal ring while your speed is <b>below</b> the Capture value.</li>
+        </ul>
+        <h3>Tools</h3>
+        <ul>
+          <li><b>Attractor</b> (blue well): pulls the probe. Stronger up close.</li>
+          <li><b>Repulsor</b> (violet ring): pushes the probe away. Stronger up close.</li>
+          <li><b>Booster</b> (green arrow): instant velocity burst when the probe touches its circle. Re-arms once the probe leaves.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Controls</h3>
+        <ul>
+          <li><b>Place</b>: Left-click grid cell</li>
+          <li><b>Rotate Booster</b>: Right-click or <span class="k">R</span></li>
+          <li><b>Strength</b>: Hold <span class="k">Alt</span> while placing to cycle Low→Med→High</li>
+          <li><b>Cycle Tools</b>: <span class="k">Q/E</span> • <b>Erase</b>: <span class="k">Del</span></li>
+          <li><b>Launch/Pause</b>: <span class="k">Space</span></li>
+          <li><b>Undo</b>: <span class="k">Ctrl/⌘+Z</span></li>
+        </ul>
+        <h3>Tips</h3>
+        <ul>
+          <li>Use the <b>preview path</b> (faint blue) to iterate before you launch.</li>
+          <li>Repulsors are great for last-second braking into the goal.</li>
+          <li>Chain boosters to bend and then straighten a path.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/*** ——— Physics tuning (buffed) —————————————————————————————— ***/
+const CELL = 48;                 // grid size px
+const PAD = 16;
+const G = 3400;                  // base gravity constant (↑ stronger than v1.0)
+const POWER = 1.8;               // falloff exponent (1.8 < 2.0 = wider influence)
+const EPS = 10;                  // softening
+const DT = 0.016;                // sim dt (s)
+const MAX_STEPS = 24000;         // safety cap
+const BOOST_IMPULSE = 170;       // base booster kick (px/s) (↑ buffed)
+const BOOST_RADIUS = 28;         // trigger radius (px)
+const BOOST_HYSTERESIS = 8;      // re-arm margin
+
+/*** ——— Tools ——————————————————————————————————————————————— ***/
+const TOOL = { ATTR:1, REPEL:2, BOOST:3, ERASE:-1 };
+const TOOL_LABEL = {1:"Attractor",2:"Repulsor",3:"Booster",[-1]:"Eraser"};
+
+/*** ——— Save / Upgrades —————————————————————————————————————— ***/
+const SAVE_KEY="orbitloom_save_v11"; const SCORE_KEY="orbitloom_scores_v11";
+const SHOP = [
+  {id:"extra_attr", name:"+1 Attractor", desc:"Adds 1 Attractor to each level.", cost:120, once:true},
+  {id:"extra_repel", name:"+1 Repulsor", desc:"Adds 1 Repulsor to each level.", cost:120, once:true},
+  {id:"extra_boost", name:"+1 Booster", desc:"Adds 1 Booster to each level.", cost:120, once:true},
+  {id:"deep_undo", name:"Deep Undo", desc:"Undo depth increases to 100.", cost:90, once:true},
+  {id:"well_power", name:"Well Power+", desc:"Attractors/Repulsors slightly stronger.", cost:140, once:true},
+];
+
+function inv(a,r,b){ return {ATTR:a, REPEL:r, BOOST:b}; }
+function L(name, map, opts){ return {name, map, ...opts}; }
+
+/*** ——— Levels (added Bootcamp) ———————————————————————————— ***/
+// Legend (16×12): '.' empty, 'S' start, 'G' goal, 'o' waypoint, '#' hazard rock, '~' nebula (drag)
+const LEVELS = [
+  // Tutorial: forces you to use one booster then a repulsor to brake into goal
+  L("00 • Bootcamp",[
+    "................",
+    "................",
+    "................",
+    "................",
+    "....o........G..",
+    "................",
+    ".S..............",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+  ], {v0:[100,0], cap:90, inv:inv(1,1,2), time:60}),
+  L("01 • First Sling",[
+    "................",
+    "................",
+    "................",
+    ".....o..........",
+    "................",
+    "..S...........G.",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+  ], {v0:[100,0], cap:90, inv:inv(2,1,1), time:60}),
+  L("02 • Repulse Route",[
+    "................",
+    "................",
+    "..........#.....",
+    ".....o....#..G..",
+    "..........#.....",
+    "..S.............",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+  ], {v0:[100,0], cap:90, inv:inv(2,2,1), time:70}),
+  L("03 • Double Weave",[
+    "................",
+    "......#.........",
+    "..o...#....o....",
+    "......#.........",
+    "......#.........",
+    ".S....#......G..",
+    "......#.........",
+    "......#.........",
+    "......#.........",
+    "................",
+    "................",
+    "................",
+  ], {v0:[120,0], cap:95, inv:inv(3,2,1), time:80}),
+  L("04 • Booster Test",[
+    "................",
+    "................",
+    "...o........G...",
+    "................",
+    "................",
+    ".S..............",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+  ], {v0:[90,0], cap:80, inv:inv(2,1,2), time:60}),
+  L("05 • Hazard Dance",[
+    "......#...#.....",
+    "......#...#..G..",
+    ".o....#...#.....",
+    "......#...#.....",
+    "......#...#.....",
+    ".S....#...#..o..",
+    "......#...#.....",
+    "......#...#.....",
+    "......#...#.....",
+    "......#...#.....",
+    "................",
+    "................",
+  ], {v0:[120,0], cap:90, inv:inv(3,3,2), time:90}),
+  L("06 • Nebula Drag",[
+    ".......~~~~.....",
+    "......~~~~~~....",
+    ".S....~~~~~~..o.",
+    "......~~~~~~....",
+    ".......~~~~.....",
+    "................",
+    "..............G.",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+  ], {v0:[120,0], cap:85, inv:inv(3,2,2), time:90}),
+  L("07 • Slings & Rings",[
+    "................",
+    "....o...........",
+    "................",
+    "...#.......#....",
+    "................",
+    ".S.....G........",
+    "................",
+    "...#.......#....",
+    "................",
+    "...........o....",
+    "................",
+    "................",
+  ], {v0:[110,0], cap:85, inv:inv(4,3,2), time:90}),
+  L("08 • Crosswind",[
+    "................",
+    "...#......#..G..",
+    "..o#......#.....",
+    "...#......#.....",
+    "................",
+    ".S..............",
+    "................",
+    "................",
+    "................",
+    "...o............",
+    "................",
+    "................",
+  ], {v0:[120,0], cap:90, inv:inv(4,3,3), time:95}),
+  L("09 • Pinball Field",[
+    "................",
+    ".#..#..#..#..#..",
+    ".#..#..#..#..#..",
+    ".#..#..#..#..#..",
+    ".#..#..#..#..#..",
+    ".S..o..o..o..G..",
+    ".#..#..#..#..#..",
+    ".#..#..#..#..#..",
+    ".#..#..#..#..#..",
+    ".#..#..#..#..#..",
+    "................",
+    "................",
+  ], {v0:[120,0], cap:85, inv:inv(5,4,2), time:110}),
+  L("10 • Curve Garden",[
+    "................",
+    "...............o",
+    "................",
+    "..#..#..#..#....",
+    "................",
+    ".S...........G..",
+    "................",
+    "..#..#..#..#....",
+    "................",
+    "o...............",
+    "................",
+    "................",
+  ], {v0:[120,0], cap:90, inv:inv(5,4,3), time:110}),
+  L("11 • Booster Lace",[
+    "................",
+    "...o..........G.",
+    "................",
+    ".#.#.#.#.#.#.#..",
+    "................",
+    ".S..............",
+    "................",
+    ".#.#.#.#.#.#.#..",
+    "................",
+    "....o...........",
+    "................",
+    "................",
+  ], {v0:[110,0], cap:85, inv:inv(4,3,5), time:110}),
+  L("12 • Thread the Eye",[
+    "........#.......",
+    "........#..o....",
+    "........#.......",
+    ".S......#....G..",
+    "........#.......",
+    "........#.......",
+    "........#.......",
+    "........#.......",
+    "........#.......",
+    "........#..o....",
+    "........#.......",
+    "................",
+  ], {v0:[115,0], cap:85, inv:inv(6,5,3), time:120}),
+  L("13 • Nebula Weave",[
+    "~~~~~......~~~~~",
+    "~~~~~......~~~~~",
+    "~~~~~..o...~~~~~",
+    ".S.............G",
+    "~~~~~......~~~~~",
+    "~~~~~......~~~~~",
+    "~~~~~..o...~~~~~",
+    "................",
+    "................",
+    "................",
+    "................",
+    "................",
+  ], {v0:[120,0], cap:85, inv:inv(6,6,4), time:130}),
+  L("14 • Finale",[
+    "................",
+    ".#..o......o..#.",
+    "................",
+    ".#............#.",
+    "................",
+    ".S.....G........",
+    "................",
+    ".#............#.",
+    "................",
+    ".#..o......o..#.",
+    "................",
+    "................",
+  ], {v0:[125,0], cap:85, inv:inv(7,6,5), time:140}),
+];
+
+/*** ——— DOM ———————————————————————————————————————————————— ***/
+const CAN = document.getElementById('canvas'), CTX = CAN.getContext('2d');
+const UI = {
+  levelName:byId('levelName'), wpOk:byId('wpOk'), wpAll:byId('wpAll'),
+  moves:byId('moves'), time:byId('time'), status:byId('status'),
+  credits:byId('credits'), bestScore:byId('bestScore'), bestStars:byId('bestStars'),
+  speed:byId('speed'), cap:byId('cap'), predict:byId('predict'),
+  inv:byId('inv'), upgList:byId('upgList'), levels:byId('levels'),
+  btnLaunch:byId('btnLaunch'), btnPause:byId('btnPause'), btnReset:byId('btnReset'),
+  btnUndo:byId('btnUndo'), btnNew:byId('btnNew'), btnMenu:byId('btnMenu'),
+  btnClear:byId('btnClear'), btnHelp:byId('btnHelp'),
+  help:byId('help'), closeHelp:byId('closeHelp')
+};
+function byId(id){return document.getElementById(id);}
+
+/*** ——— Save ———————————————————————————————————————————————— ***/
+const defaultSave = () => ({unlocked:1, credits:0, upgrades:{}, best:{}});
+let save = load(SAVE_KEY, defaultSave());
+let scores = load(SCORE_KEY, {});
+function load(k,f){ try{const v=JSON.parse(localStorage.getItem(k)||"null");return v||structuredClone(f);}catch{return structuredClone(f);} }
+function persist(){ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); localStorage.setItem(SCORE_KEY, JSON.stringify(scores)); }
+
+/*** ——— State ——————————————————————————————————————————————— ***/
+let state = {
+  levelIndex:0,
+  gridW:16, gridH:12,
+  start:[0,0], v0:[100,0], cap:90, timeLimit:60,
+  goal:[0,0], goalR:18,
+  waypoints:[], hazards:[], nebulas:[],
+  pieces:[], // {tool,x,y,rot,strength,armed}
+  inv:{ATTR:0,REPEL:0,BOOST:0},
+  running:false, t:0, steps:0,
+  probe:{p:[0,0], v:[0,0], alive:true, wpgot:new Set()},
+  moves:0, undo:[], maxUndo:50
+};
+
+/*** ——— Level start/reset ———————————————————————————————————— ***/
+function startLevel(idx){
+  idx=Math.max(0,Math.min(idx,LEVELS.length-1));
+  const L=LEVELS[idx];
+  state.levelIndex=idx;
+  state.gridW=L.map[0].length; state.gridH=L.map.length;
+  state.pieces=[]; state.undo=[]; state.moves=0; state.running=false; state.t=0; state.steps=0;
+  state.maxUndo = save.upgrades.deep_undo?100:50;
+
+  state.waypoints=[]; state.hazards=[]; state.nebulas=[];
+  for(let y=0;y<state.gridH;y++){
+    const row=L.map[y];
+    for(let x=0;x<state.gridW;x++){
+      const ch=row[x];
+      if(ch==='S') state.start=centerOf(x,y);
+      if(ch==='G') state.goal=centerOf(x,y);
+      if(ch==='o') state.waypoints.push(centerOf(x,y));
+      if(ch==='#') state.hazards.push(centerOf(x,y));
+      if(ch==='~') state.nebulas.push(centerOf(x,y));
+    }
+  }
+  state.v0=structuredClone(L.v0||[100,0]);
+  state.cap=L.cap||90; UI.cap.textContent=state.cap;
+  state.timeLimit=L.time||60;
+
+  state.inv=structuredClone(L.inv);
+  if(save.upgrades.extra_attr) state.inv.ATTR++;
+  if(save.upgrades.extra_repel) state.inv.REPEL++;
+  if(save.upgrades.extra_boost) state.inv.BOOST++;
+
+  resetProbe();
+
+  UI.levelName.textContent=L.name;
+  UI.wpAll.textContent=state.waypoints.length; UI.wpOk.textContent='0';
+  UI.moves.textContent='0'; UI.time.textContent='0.0'; UI.status.textContent='idle';
+  UI.speed.textContent='0'; UI.predict.textContent='on';
+
+  // best
+  const b=save.best[idx];
+  UI.bestScore.textContent=b?b.score:"—";
+  UI.bestStars.textContent=b?"★".repeat(b.stars):"—";
+
+  renderToolbar(); renderUpgrades(); renderLevelList(); draw();
+}
+function resetProbe(){
+  state.probe={p:[...state.start], v:[...state.v0], alive:true, wpgot:new Set()};
+  state.t=0; state.steps=0; state.running=false;
+}
+
+/*** ——— Inventory / Tools ———————————————————————————————— ***/
+let tool={id:TOOL.ATTR, rot:0, strength:1}; // strength cycles low(0.7)/med(1)/high(1.35)
+function renderToolbar(){
+  UI.inv.innerHTML='';
+  const items=[
+    {id:TOOL.ATTR, label:"Attractor", count:state.inv.ATTR},
+    {id:TOOL.REPEL, label:"Repulsor", count:state.inv.REPEL},
+    {id:TOOL.BOOST, label:"Booster", count:state.inv.BOOST},
+    {id:TOOL.ERASE, label:"Eraser", count:"∞"}
+  ];
+  for(const it of items){
+    const d=document.createElement('div'); d.className='tool'+(tool.id===it.id?' active':'');
+    d.innerHTML = iconFor(it.id,tool.rot)+'<small>'+it.label+' • <b>'+(it.count??'∞')+'</b></small>';
+    d.onclick=()=>{ tool.id=it.id; highlightTools(); draw(); };
+    UI.inv.appendChild(d);
+  }
+  highlightTools();
+}
+function highlightTools(){ [...UI.inv.children].forEach((c,i)=> c.classList.toggle('active',[TOOL.ATTR,TOOL.REPEL,TOOL.BOOST,TOOL.ERASE][i]===tool.id)); }
+function iconFor(id,rot=0){
+  if(id===TOOL.ATTR) return `<div>🜂</div>`;
+  if(id===TOOL.REPEL) return `<div>🜄</div>`;
+  if(id===TOOL.BOOST) return `<div style="transform:rotate(${rot*45}deg)">➤</div>`;
+  if(id===TOOL.ERASE) return `<div>⌫</div>`;
+  return `<div>?</div>`;
+}
+function hasInv(id){ if(id===TOOL.ERASE) return true; const key=id===TOOL.ATTR?'ATTR':id===TOOL.REPEL?'REPEL':'BOOST'; return (state.inv[key]??0)>0; }
+function consume(id){ if(id===TOOL.ERASE) return; const key=id===TOOL.ATTR?'ATTR':id===TOOL.REPEL?'REPEL':'BOOST'; state.inv[key]--; renderToolbar(); }
+function refund(id){ const key=id===TOOL.ATTR?'ATTR':id===TOOL.REPEL?'REPEL':'BOOST'; state.inv[key]++; renderToolbar(); }
+
+/*** ——— Upgrades / Levels list ————————————————————————————— ***/
+function renderUpgrades(){
+  UI.upgList.innerHTML='';
+  SHOP.forEach(s=>{
+    const owned=!!save.upgrades[s.id];
+    const row=document.createElement('div'); row.className='shop-card';
+    row.innerHTML=`<div><b>${s.name}</b><div class="hint">${s.desc}</div></div>
+                   <div class="row"><span class="money">₵ ${s.cost}</span>
+                   <button class="btn"${owned?' disabled':''}>${owned?'Owned':'Buy'}</button></div>`;
+    row.querySelector('button').onclick=()=>{
+      if(owned) return;
+      if(save.credits>=s.cost){ save.credits-=s.cost; save.upgrades[s.id]=true; persist(); UI.credits.textContent=save.credits; renderUpgrades(); renderToolbar(); draw(); }
+    };
+    UI.upgList.appendChild(row);
+  });
+  UI.credits.textContent=save.credits;
+}
+function renderLevelList(){
+  UI.levels.innerHTML='';
+  LEVELS.forEach((L,i)=>{
+    const locked = i>=save.unlocked;
+    const div=document.createElement('div'); div.className='level'+(locked?' locked':'');
+    const best=save.best[i];
+    div.innerHTML=`<div><b>${String(i).padStart(2,'0')}</b> ${L.name}</div>
+                   <div class="row"><span>${best?('Score '+best.score):''}</span>
+                   <span class="stars">${best?('★'.repeat(best.stars)):' '}</span>
+                   <button class="btn"${locked?' disabled':''}>Play</button></div>`;
+    div.querySelector('button').onclick=()=>startLevel(i);
+    UI.levels.appendChild(div);
+  });
+}
+
+/*** ——— Interaction —————————————————————————————————————————— ***/
+let hoverCell={x:-1,y:-1};
+CAN.addEventListener('mousemove', ev=>{
+  const r=CAN.getBoundingClientRect();
+  const sx=(ev.clientX - r.left)*(CAN.width/r.width), sy=(ev.clientY - r.top)*(CAN.height/r.height);
+  hoverCell=cellOfPoint(sx,sy); draw();
+});
+CAN.addEventListener('mouseleave', ()=>{ hoverCell={x:-1,y:-1}; draw(); });
+CAN.addEventListener('contextmenu', e=>e.preventDefault());
+
+CAN.addEventListener('mousedown', ev=>{
+  if(state.running) return;
+  const r=CAN.getBoundingClientRect();
+  const sx=(ev.clientX - r.left)*(CAN.width/r.width), sy=(ev.clientY - r.top)*(CAN.height/r.height);
+  const {x,y}=cellOfPoint(sx,sy);
+  if(!insideGrid(x,y)) return;
+
+  // rotate on right click
+  if(ev.button===2){ if(tool.id===TOOL.BOOST){ tool.rot=(tool.rot+1)&7; renderToolbar(); draw(); } return; }
+
+  const existingIndex = state.pieces.findIndex(p=>p.x===x && p.y===y);
+  if(tool.id===TOOL.ERASE){
+    if(existingIndex>=0){
+      pushUndo();
+      const removed = state.pieces.splice(existingIndex,1)[0];
+      refund(removed.tool);
+      state.moves++; UI.moves.textContent=state.moves; draw();
+    }
+    return;
+  }
+
+  if(!hasInv(tool.id)) return;
+  pushUndo();
+
+  // place/replace
+  if(existingIndex>=0){
+    const removed = state.pieces.splice(existingIndex,1)[0];
+    refund(removed.tool);
+  }
+
+  // strength cycle with Alt
+  if(ev.altKey){
+    if(tool.strength<0.8) tool.strength=1; else if(tool.strength<1.2) tool.strength=1.35; else tool.strength=0.7;
+  }
+  const piece = {tool:tool.id, x,y, rot:tool.rot, strength:tool.strength, armed:true, rearmAt:BOOST_RADIUS+BOOST_HYSTERESIS};
+  state.pieces.push(piece);
+  consume(tool.id);
+  state.moves++; UI.moves.textContent=state.moves;
+  draw();
+});
+
+window.addEventListener('keydown', e=>{
+  if(e.key==='Delete'){ tool.id=TOOL.ERASE; highlightTools(); draw(); }
+  else if(e.key==='e'||e.key==='E'){ cycleTool(1); }
+  else if(e.key==='q'||e.key==='Q'){ cycleTool(-1); }
+  else if(e.key==='r'||e.key==='R'){ if(tool.id===TOOL.BOOST){ tool.rot=(tool.rot+1)&7; renderToolbar(); draw(); } }
+  else if(e.key===' '){ e.preventDefault(); if(state.running) pause(); else launch(); }
+  else if(e.key==='z'&&(e.ctrlKey||e.metaKey)){ undo(); }
+  else if(e.key==='h'||e.key==='H'){ toggleHelp(true); }
+});
+function cycleTool(d){
+  const ids=[TOOL.ATTR,TOOL.REPEL,TOOL.BOOST,TOOL.ERASE];
+  let k=ids.indexOf(tool.id);
+  k=(k+d+ids.length)%ids.length; tool.id=ids[k];
+  highlightTools(); draw();
+}
+
+/*** ——— Undo ——————————————————————————————————————————————— ***/
+function pushUndo(){
+  state.undo.push({pieces:structuredClone(state.pieces), inv:structuredClone(state.inv), moves:state.moves});
+  if(state.undo.length>state.maxUndo) state.undo.shift();
+}
+function undo(){
+  const s=state.undo.pop(); if(!s) return;
+  state.pieces=s.pieces; state.inv=s.inv; state.moves=s.moves;
+  UI.moves.textContent=state.moves;
+  renderToolbar(); draw();
+}
+
+/*** ——— Simulation —————————————————————————————————————————— ***/
+let raf=null;
+function launch(){ resetProbe(); state.running=true; UI.status.textContent='running'; loop(); }
+function pause(){ state.running=false; UI.status.textContent='paused'; if(raf) cancelAnimationFrame(raf); }
+UI.btnLaunch.onclick=launch; UI.btnPause.onclick=pause; UI.btnReset.onclick=()=>{ pause(); resetProbe(); draw(); toast('Reset'); };
+UI.btnUndo.onclick=()=>undo();
+UI.btnNew.onclick=()=>{
+  if(confirm('Start new game? Progress and credits reset (scores remain).')){ save=defaultSave(); persist(); renderUpgrades(); renderLevelList(); startLevel(0); }
+};
+UI.btnMenu.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
+UI.btnClear.onclick=()=>{ if(state.running) return; if(confirm('Clear all placed pieces?')){ pushUndo(); state.pieces=[]; draw(); } };
+UI.btnHelp.onclick=()=>toggleHelp(true);
+UI.closeHelp.onclick=()=>toggleHelp(false);
+UI.help.addEventListener('click', (e)=>{ if(e.target.id==='help') toggleHelp(false); });
+function toggleHelp(on){ UI.help.style.display=on?'flex':'none'; }
+
+function loop(){
+  if(!state.running) return;
+  stepSim(DT);
+  draw();
+  raf=requestAnimationFrame(loop);
+}
+
+function fieldAt(p, applyBoosters=true){
+  // acceleration at point p
+  let a=[0,0];
+  const k = save.upgrades.well_power? 1.15 : 1.0;
+  for(const piece of state.pieces){
+    const pc = centerOf(piece.x,piece.y);
+    const d = sub(pc,p);
+    const r = Math.hypot(d[0],d[1]);
+    if(piece.tool===TOOL.ATTR || piece.tool===TOOL.REPEL){
+      const sgn = piece.tool===TOOL.ATTR ? +1 : -1;
+      const strength = k * piece.strength;
+      const mag = (G*strength) / Math.pow((r+EPS), POWER);
+      const acc = mul(d, sgn*mag/(r||1));
+      a = add(a, acc);
+    }else if(applyBoosters && piece.tool===TOOL.BOOST){
+      // Trigger booster with hysteresis so it re-arms only after leaving a larger radius
+      if(r<BOOST_RADIUS && piece.armed){
+        const dir = [Math.cos(piece.rot*Math.PI/4), Math.sin(piece.rot*Math.PI/4)];
+        state.probe.v = add(state.probe.v, mul(dir, BOOST_IMPULSE*piece.strength));
+        piece.armed=false;
+      }else if(r > piece.rearmAt){
+        piece.armed=true;
+      }
+    }
+  }
+
+  // Nebula drag zones
+  for(const nb of state.nebulas){
+    const d=sub(nb,p), r=Math.hypot(d[0],d[1]);
+    if(r<36){ a = add(a, mul(state.probe.v, -0.85)); }
+  }
+  return a;
+}
+
+function stepSim(dt){
+  if(!state.probe.alive){ state.running=false; return; }
+  // Semi-implicit Euler
+  const a = fieldAt(state.probe.p, true);
+  state.probe.v = add(state.probe.v, mul(a, dt));
+  state.probe.p = add(state.probe.p, mul(state.probe.v, dt));
+  state.t += dt; state.steps++;
+  UI.time.textContent = state.t.toFixed(1);
+  UI.speed.textContent = Math.round(len(state.probe.v));
+
+  // bounds
+  const minx=pad(), miny=pad(), maxx=pad()+state.gridW*CELL, maxy=pad()+state.gridH*CELL;
+  if(state.probe.p[0]<minx-60||state.probe.p[1]<miny-60||state.probe.p[0]>maxx+60||state.probe.p[1]>maxy+60){ fail("lost in space"); return; }
+
+  // hazards
+  for(const h of state.hazards){
+    if(Math.hypot(state.probe.p[0]-h[0], state.probe.p[1]-h[1])<20){ fail("impact"); return; }
+  }
+
+  // waypoints
+  let gotCount=state.probe.wpgot.size;
+  state.waypoints.forEach((w,i)=>{
+    if(!state.probe.wpgot.has(i)){
+      if(Math.hypot(state.probe.p[0]-w[0], state.probe.p[1]-w[1])<18){
+        state.probe.wpgot.add(i);
+        gotCount++;
+        UI.wpOk.textContent=gotCount;
+        ping(w);
+      }
+    }
+  });
+
+  // goal
+  const inGoal = Math.hypot(state.probe.p[0]-state.goal[0], state.probe.p[1]-state.goal[1])<state.goalR;
+  const slowEnough = len(state.probe.v) < state.cap;
+  if(inGoal && slowEnough && state.probe.wpgot.size===state.waypoints.length){ success(); return; }
+
+  if(state.t > state.timeLimit+20 || state.steps>MAX_STEPS){ fail("out of time"); return; }
+}
+
+/*** ——— Drawing ————————————————————————————————————————————— ***/
+function draw(){
+  CAN.width = pad()*2 + state.gridW*CELL;
+  CAN.height = pad()*2 + state.gridH*CELL;
+
+  // star specks
+  CTX.clearRect(0,0,CAN.width,CAN.height);
+  for(let i=0;i<110;i++){
+    const x=(i*73)%CAN.width, y=(i*199)%CAN.height;
+    CTX.fillStyle = `rgba(200,220,255,${0.05+((i%7)/30)})`;
+    CTX.fillRect(x,y,1,1);
+  }
+
+  // grid
+  CTX.strokeStyle="#122040"; CTX.lineWidth=1;
+  for(let y=0;y<=state.gridH;y++){ CTX.beginPath(); CTX.moveTo(pad(), pad()+y*CELL); CTX.lineTo(pad()+state.gridW*CELL, pad()+y*CELL); CTX.stroke(); }
+  for(let x=0;x<=state.gridW;x++){ CTX.beginPath(); CTX.moveTo(pad()+x*CELL, pad()); CTX.lineTo(pad()+x*CELL, pad()+state.gridH*CELL); CTX.stroke(); }
+
+  // nebulas
+  for(const n of state.nebulas){
+    const grd=CTX.createRadialGradient(n[0],n[1],2,n[0],n[1],24);
+    grd.addColorStop(0,"#4cc2ff55"); grd.addColorStop(1,"#4cc2ff15");
+    CTX.fillStyle=grd; CTX.beginPath(); CTX.arc(n[0],n[1],24,0,Math.PI*2); CTX.fill();
+    CTX.strokeStyle="#3db0ff55"; CTX.lineWidth=1.5; CTX.beginPath(); CTX.arc(n[0],n[1],24,0,Math.PI*2); CTX.stroke();
+  }
+
+  // hazards
+  for(const h of state.hazards){
+    CTX.fillStyle="#ff5d73"; CTX.beginPath(); CTX.arc(h[0],h[1],18,0,Math.PI*2); CTX.fill();
+    CTX.strokeStyle="#8b1c2d"; CTX.lineWidth=2; CTX.stroke();
+  }
+
+  // goal
+  CTX.strokeStyle="#2ecc71"; CTX.lineWidth=3;
+  CTX.beginPath(); CTX.arc(state.goal[0], state.goal[1], state.goalR, 0, Math.PI*2); CTX.stroke();
+  CTX.fillStyle="#2ecc7115"; CTX.beginPath(); CTX.arc(state.goal[0], state.goal[1], 6, 0, Math.PI*2); CTX.fill();
+
+  // waypoints
+  for(let i=0;i<state.waypoints.length;i++){
+    const w=state.waypoints[i], got=state.probe.wpgot.has(i);
+    CTX.fillStyle=got?"#ffc857aa":"#ffc85755";
+    CTX.beginPath(); CTX.arc(w[0],w[1],12,0,Math.PI*2); CTX.fill();
+    CTX.strokeStyle=got?"#ffdf8a":"#bc8e2f"; CTX.lineWidth=2; CTX.stroke();
+  }
+
+  // pieces
+  for(const p of state.pieces){
+    const c=centerOf(p.x,p.y);
+    if(p.tool===TOOL.ATTR){
+      const grd=CTX.createRadialGradient(c[0],c[1],0,c[0],c[1],26);
+      grd.addColorStop(0,"#6aa9ffcc"); grd.addColorStop(1,"#6aa9ff22");
+      CTX.fillStyle=grd; CTX.beginPath(); CTX.arc(c[0],c[1],26,0,Math.PI*2); CTX.fill();
+      CTX.fillStyle="#6aa9ff"; CTX.beginPath(); CTX.arc(c[0],c[1],8,0,Math.PI*2); CTX.fill();
+    }else if(p.tool===TOOL.REPEL){
+      const grd=CTX.createRadialGradient(c[0],c[1],0,c[0],c[1],26);
+      grd.addColorStop(0,"#9b7bff99"); grd.addColorStop(1,"#9b7bff22");
+      CTX.fillStyle=grd; CTX.beginPath(); CTX.arc(c[0],c[1],26,0,Math.PI*2); CTX.fill();
+      CTX.strokeStyle="#b7a3ff"; CTX.lineWidth=2; CTX.beginPath(); CTX.arc(c[0],c[1],10,0,Math.PI*2); CTX.stroke();
+    }else if(p.tool===TOOL.BOOST){
+      CTX.save(); CTX.translate(c[0],c[1]); CTX.rotate(p.rot*Math.PI/4);
+      CTX.fillStyle=p.armed?"#2ecc71":"#7dd6a6";
+      CTX.beginPath(); CTX.moveTo(0,-10); CTX.lineTo(26,0); CTX.lineTo(0,10); CTX.closePath(); CTX.fill();
+      CTX.restore();
+      // trigger ring
+      CTX.strokeStyle=p.armed?"#2ecc7133":"#2ecc7111"; CTX.lineWidth=2; CTX.beginPath(); CTX.arc(c[0],c[1],BOOST_RADIUS,0,Math.PI*2); CTX.stroke();
+    }
+  }
+
+  // hover preview
+  if(!state.running && insideGrid(hoverCell.x,hoverCell.y)){
+    const c=centerOf(hoverCell.x,hoverCell.y);
+    CTX.globalAlpha=0.6;
+    if(tool.id===TOOL.ATTR){ CTX.fillStyle="#6aa9ff44"; CTX.beginPath(); CTX.arc(c[0],c[1],26,0,Math.PI*2); CTX.fill(); }
+    if(tool.id===TOOL.REPEL){ CTX.strokeStyle="#9b7bffaa"; CTX.lineWidth=2; CTX.beginPath(); CTX.arc(c[0],c[1],26,0,Math.PI*2); CTX.stroke(); }
+    if(tool.id===TOOL.BOOST){ CTX.save(); CTX.translate(c[0],c[1]); CTX.rotate(tool.rot*Math.PI/4); CTX.fillStyle="#2ecc71aa"; CTX.beginPath(); CTX.moveTo(0,-10); CTX.lineTo(26,0); CTX.lineTo(0,10); CTX.closePath(); CTX.fill(); CTX.restore();
+      CTX.strokeStyle="#2ecc71aa"; CTX.lineWidth=2; CTX.beginPath(); CTX.arc(c[0],c[1],BOOST_RADIUS,0,Math.PI*2); CTX.stroke(); }
+    CTX.globalAlpha=1;
+  }
+
+  // predictor path (always on now)
+  const trail = predictPath(4.0);
+  if(trail.length){
+    CTX.strokeStyle="#7ab3ff66"; CTX.lineWidth=2; CTX.beginPath();
+    CTX.moveTo(trail[0][0], trail[0][1]); for(const p of trail){ CTX.lineTo(p[0],p[1]); } CTX.stroke();
+  }
+
+  // start marker
+  CTX.fillStyle="#ffffff"; CTX.beginPath(); CTX.arc(state.start[0],state.start[1],5,0,Math.PI*2); CTX.fill();
+
+  // probe
+  CTX.fillStyle=state.probe.alive?"#e7ecf6":"#888ea0";
+  CTX.beginPath(); CTX.arc(state.probe.p[0],state.probe.p[1],4,0,Math.PI*2); CTX.fill();
+}
+
+function predictPath(seconds){
+  // preview ignoring booster kicks (keeps it “what would gravity alone do?”)
+  const steps = Math.floor(seconds / DT);
+  let p=[...state.start], v=[...state.v0];
+  const pts=[];
+  for(let s=0;s<steps;s++){
+    let a=[0,0];
+    const k = save.upgrades.well_power? 1.15 : 1.0;
+    for(const piece of state.pieces){
+      if(piece.tool===TOOL.BOOST) continue;
+      const pc=centerOf(piece.x,piece.y), d=sub(pc,p), r=Math.hypot(d[0],d[1]);
+      if(piece.tool===TOOL.ATTR || piece.tool===TOOL.REPEL){
+        const sgn = piece.tool===TOOL.ATTR ? +1 : -1;
+        const mag = (G*k*piece.strength)/Math.pow((r+EPS), POWER);
+        a = add(a, mul(d, sgn*mag/(r||1)));
+      }
+    }
+    for(const nb of state.nebulas){ const d=sub(nb,p), r=Math.hypot(d[0],d[1]); if(r<36) a=add(a, mul(v,-0.85)); }
+    v=add(v,mul(a,DT)); p=add(p,mul(v,DT));
+    pts.push([...p]);
+    if(p[0]<pad()||p[1]<pad()||p[0]>pad()+state.gridW*CELL||p[1]>pad()+state.gridH*CELL) break;
+  }
+  return pts;
+}
+
+/*** ——— Scoring / Progress ——————————————————————————————————— ***/
+function success(){
+  state.running=false;
+  const elapsed = state.t;
+  const unused = state.inv.ATTR+state.inv.REPEL+state.inv.BOOST;
+  const base = 620 + state.levelIndex*35;
+  const timeBonus = Math.max(0, (LEVELS[state.levelIndex].time||60) - elapsed);
+  const score = Math.max(50, Math.round(base + timeBonus*8 + unused*30 - state.moves*2));
+  const stars = score>1100?3 : score>850?2 : 1;
+  const credits = Math.max(30, Math.round(42 + timeBonus*0.8 + unused*3));
+
+  save.credits += credits;
+  const idx=state.levelIndex;
+  const best=save.best[idx];
+  if(!best || score>best.score){ save.best[idx]={score,stars,time:+elapsed.toFixed(1),moves:state.moves}; }
+  if(save.unlocked < idx+2) save.unlocked=idx+2;
+  persist();
+
+  UI.credits.textContent=save.credits;
+  UI.bestScore.textContent=save.best[idx].score;
+  UI.bestStars.textContent='★'.repeat(save.best[idx].stars);
+  renderLevelList();
+  UI.status.textContent='success';
+  toast(`Success! +₵${credits} • Score ${score} • ${stars}★`);
+}
+function fail(reason){
+  state.running=false; state.probe.alive=false;
+  UI.status.textContent='fail';
+  toast(`Mission failed: ${reason}`, true);
+}
+
+/*** ——— Math & utils ———————————————————————————————————————— ***/
+function add(a,b){return [a[0]+b[0],a[1]+b[1]];}
+function sub(a,b){return [a[0]-b[0],a[1]-b[1]];}
+function mul(a,s){return [a[0]*s,a[1]*s];}
+function len(v){return Math.hypot(v[0],v[1]);}
+function pad(){ return PAD; }
+function centerOf(x,y){ return [pad()+CELL/2 + x*CELL, pad()+CELL/2 + y*CELL]; }
+function cellOfPoint(px,py){ const x=Math.floor((px-pad())/CELL), y=Math.floor((py-pad())/CELL); return {x,y}; }
+function insideGrid(x,y){ return x>=0&&y>=0&&x<state.gridW&&y<state.gridH; }
+
+function toast(msg, danger=false){
+  const t=document.createElement('div'); t.textContent=msg;
+  Object.assign(t.style,{
+    position:'fixed',left:'50%',top:'16px',transform:'translateX(-50%)',
+    background: danger?'#ff5d73':'linear-gradient(90deg,var(--accent),var(--accent2))',
+    color:'#0b0f1a', padding:'10px 14px',borderRadius:'12px',
+    boxShadow:'0 6px 16px rgba(0,0,0,.35)',zIndex:9999,fontWeight:'800'
+  });
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.transition='opacity .3s ease, transform .3s ease'; t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(-6px)'; }, 1400);
+  setTimeout(()=>t.remove(), 1800);
+}
+
+/*** ——— Init ——————————————————————————————————————————————— ***/
+startLevel(Math.min(save.unlocked-1, LEVELS.length-1));
+
+})();
+</script>
+</body>
+</html>

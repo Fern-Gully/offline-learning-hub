@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Micro Rogue — Offline</title>
+<style>
+  :root{
+    --bg:#0a0f22; --bg2:#0e1533; --card:#12182a; --stroke:#1e2544;
+    --accent:#3b82f6; --accent2:#8b5cf6; --muted:#9aa4b2; --fg:#e6e9ef;
+    --good:#22c55e; --warn:#f59e0b; --bad:#ef4444; --glass:rgba(255,255,255,.06);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;color:var(--fg);font:16px/1.6 system-ui,Segoe UI,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,.18), transparent 60%),
+      radial-gradient(1000px 600px at 110% 20%, rgba(139,92,246,.16), transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg2));
+    background-attachment: fixed;
+  }
+  header{
+    padding:1.1rem 1rem;border-bottom:1px solid var(--stroke);
+    text-align:center;font-weight:800;letter-spacing:.02em;
+    position:sticky;top:0;backdrop-filter:saturate(140%) blur(6px);
+    background:
+      linear-gradient(to right, rgba(16,22,38,.65), rgba(16,22,38,.35)),
+      radial-gradient(60% 120% at 50% -20%, rgba(59,130,246,.18), transparent 60%);
+    z-index:10;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:1rem 1.25rem;display:grid;gap:1rem;grid-template-columns:320px 1fr}
+  @media (max-width:980px){ .wrap{grid-template-columns:1fr} }
+  .panel{
+    background:linear-gradient(180deg, rgba(20,26,42,.96), rgba(20,26,42,.85));
+    border:1px solid var(--stroke); border-radius:16px; padding:1rem;
+    box-shadow:0 10px 24px rgba(0,0,0,.32);
+  }
+  .row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+  button, input{
+    background:transparent;color:var(--fg);border:1px solid var(--accent);
+    border-radius:10px;padding:.45rem .7rem;font-weight:700;letter-spacing:.02em;
+  }
+  button{cursor:pointer;transition:.15s}
+  button:hover{background:rgba(59,130,246,.12)}
+  .muted{color:var(--muted)}
+  .stat{padding:.35rem .6rem;border:1px solid var(--stroke);border-radius:8px;background:var(--glass);font-variant-numeric:tabular-nums;font-weight:800}
+  .gridwrap{display:grid;gap:.6rem}
+  canvas{width:100%;height:auto;border-radius:14px;border:1px solid var(--stroke);background:#0c1328;box-shadow:inset 0 6px 10px rgba(0,0,0,.35)}
+  .log{max-height:220px;overflow:auto;border:1px solid var(--stroke);border-radius:10px;background:var(--glass);padding:.5rem;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:.9rem}
+  .hpbar{height:10px;background:#12203a;border:1px solid var(--stroke);border-radius:999px;overflow:hidden}
+  .hpfill{height:100%;background:linear-gradient(90deg,#16a34a,#22c55e,#86efac)}
+  .pill{display:inline-flex;align-items:center;gap:.35rem;padding:.18rem .5rem;border:1px solid var(--stroke);border-radius:999px;background:var(--glass);font-weight:700}
+  .kbd{font-family:ui-monospace,monospace;background:#0e1735;border:1px solid var(--stroke);padding:.06rem .35rem;border-radius:6px}
+</style>
+</head>
+<body>
+  <header>🗡️ Micro Rogue</header>
+  <div class="wrap">
+    <!-- Left: HUD & controls -->
+    <div class="panel">
+      <div class="gridwrap">
+        <div class="row">
+          <span class="stat">Depth <b id="depth">1</b>/3</span>
+          <span class="stat">HP <b id="hp">10</b>/<b id="hpmax">10</b></span>
+          <span class="stat">ATK <b id="atk">2</b></span>
+        </div>
+        <div class="hpbar"><div id="hpfill" class="hpfill" style="width:100%"></div></div>
+
+        <div class="row">
+          <button id="newRun">New Run</button>
+          <button id="saveQuit">Save & Quit</button>
+          <button id="daily">Daily Seed</button>
+        </div>
+        <div class="row">
+          <span class="pill">Seed: <b id="seedLabel">—</b></span>
+          <input id="seedInput" placeholder="custom seed" style="flex:1; min-width:120px"/>
+        </div>
+
+        <div class="row muted" style="line-height:1.3">
+          <div>
+            Move: <span class="kbd">WASD</span>/<span class="kbd">↑←↓→</span> · Wait: <span class="kbd">.</span> · Click/tap to move one step.<br/>
+            Goal: descend to depth 3, grab the <b>Orb</b>, then climb back out. Potions heal, keys open doors.
+          </div>
+        </div>
+
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <!-- Right: the game -->
+    <div class="panel">
+      <canvas id="view" width="672" height="672" aria-label="Dungeon view"></canvas>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ===== Utilities & RNG =====
+  function xmur3(str){ let h=1779033703^str.length; for(let i=0;i<str.length;i++){ h=Math.imul(h^str.charCodeAt(i),3432918353); h=h<<13|h>>>19; } return ()=>{ h=Math.imul(h^ (h>>>16), 2246822507); h=Math.imul(h^ (h>>>13), 3266489909); return (h^=h>>>16)>>>0; } }
+  function mulberry32(a){ return function(){ let t = a += 0x6D2B79F5; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; } }
+  const url = new URL(location.href);
+  const seedParam = url.searchParams.get("seed");
+  function dailySeed(){ const d=new Date(); return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`; }
+
+  // ===== Game constants =====
+  const W = 21, H = 21;               // visible map size (per depth)
+  const TILE = 32;                    // px size drawn (canvas scaled in CSS)
+  const FOV_R = 8;                    // visibility radius
+  const MAX_DEPTH = 3;
+
+  const T = { Wall:1, Floor:2, Door:3, Down:4, Up:5, Orb:6, Lock:7 };
+  const COLORS = {
+    wall:"#0e1735", floor:"#121a33", seen:"#0b1228",
+    door:"#734b26", lock:"#a16207",
+    down:"#3b82f6", up:"#8b5cf6", orb:"#22c55e"
+  };
+
+  // ===== State =====
+  let seed = seedParam || localStorage.getItem('mr_last_seed') || dailySeed();
+  let rand = mulberry32(xmur3(seed)());
+  let depth = 1;
+  let player = {x:0,y:0,hp:10,hpmax:10,atk:2,keys:0,hasOrb:false};
+  let map = [], seen = [], enemies = [], upPos=null, downPos=null, orbPos=null;
+  let messageLog = [];
+  const saveKey = 'micro_rogue_save_v1';
+
+  // ===== DOM =====
+  const cvs = document.getElementById('view');
+  const ctx = cvs.getContext('2d');
+  const hpEl = id('hp'), hpMaxEl = id('hpmax'), atkEl = id('atk');
+  const hpFillEl = id('hpfill'), depthEl = id('depth'), seedLabel = id('seedLabel');
+  const logEl = id('log'), seedInput = id('seedInput');
+  id('newRun').onclick = newRun;
+  id('saveQuit').onclick = saveQuit;
+  id('daily').onclick = ()=>{ seedInput.value=dailySeed(); };
+  seedLabel.textContent = seed; seedInput.value = '';
+
+  // ===== Helpers =====
+  function id(x){return document.getElementById(x);}
+  function irand(n){ return (rand()*n)|0; }
+  function choice(arr){ return arr[(rand()*arr.length)|0]; }
+  function clamp(a,b,c){ return Math.max(b,Math.min(c,a)); }
+  function pushLog(msg){ messageLog.unshift(msg); messageLog=messageLog.slice(0,80); logEl.innerHTML = messageLog.map(x=>`• ${x}`).join('<br/>'); }
+
+  // ===== Map generation (rooms + corridors) =====
+  function emptyMap(){ return Array.from({length:H},()=>Array(W).fill(T.Wall)); }
+  function rectsOverlap(a,b){ return !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y); }
+  function carveRoom(m, r){ for(let y=r.y;y<r.y+r.h;y++)for(let x=r.x;x<r.x+r.w;x++) m[y][x]=T.Floor; }
+  function carveH(m, x1,x2,y){ for(let x=Math.min(x1,x2); x<=Math.max(x1,x2); x++) if(m[y][x]===T.Wall)m[y][x]=T.Floor; }
+  function carveV(m, y1,y2,x){ for(let y=Math.min(y1,y2); y<=Math.max(y1,y2); y++) if(m[y][x]===T.Wall)m[y][x]=T.Floor; }
+
+  function generate(level){
+    map = emptyMap(); seen = Array.from({length:H},()=>Array(W).fill(false));
+    enemies=[]; upPos=null; downPos=null; orbPos=null;
+
+    // rooms
+    const rooms=[];
+    const attempts=80, targetRooms=6+irand(4);
+    for(let i=0;i<attempts && rooms.length<targetRooms;i++){
+      const w=5+irand(5), h=5+irand(5);
+      const x=1+irand(W-w-2), y=1+irand(H-h-2);
+      const r={x,y,w,h};
+      if(rooms.some(o=>rectsOverlap({x:r.x-1,y:r.y-1,w:r.w+2,h:r.h+2},o))) continue;
+      rooms.push(r); carveRoom(map,r);
+    }
+    if(!rooms.length){ // fallback
+      rooms.push({x:2,y:2,w:W-4,h:H-4}); carveRoom(map,rooms[0]);
+    }
+    // corridors: connect each room to nearest neighbor
+    for(let i=0;i<rooms.length;i++){
+      let a=rooms[i], best={d:1e9,j:-1};
+      for(let j=0;j<rooms.length;j++){
+        if(i===j) continue;
+        const b=rooms[j], cxA=a.x+(a.w>>1), cyA=a.y+(a.h>>1), cxB=b.x+(b.w>>1), cyB=b.y+(b.h>>1);
+        const d=Math.hypot(cxA-cxB, cyA-cyB);
+        if(d<best.d) best={d,j};
+      }
+      if(best.j>=0){
+        const b=rooms[best.j];
+        const ax=a.x+(a.w>>1), ay=a.y+(a.h>>1), bx=b.x+(b.w>>1), by=b.y+(b.h>>1);
+        if(rand()<0.5){carveH(map,ax,bx,ay); carveV(map,ay,by,bx);}
+        else{carveV(map,ay,by,ax); carveH(map,ax,bx,by);}
+      }
+    }
+    // sprinkle doors where floor meets floor across a narrow neck
+    for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){
+      if(map[y][x]!==T.Floor) continue;
+      const walls = (map[y-1][x]===T.Wall)+(map[y+1][x]===T.Wall)+(map[y][x-1]===T.Wall)+(map[y][x+1]===T.Wall);
+      const floors = (map[y-1][x]===T.Floor)+(map[y+1][x]===T.Floor)+(map[y][x-1]===T.Floor)+(map[y][x+1]===T.Floor);
+      if(walls===2 && floors===2 && rand()<0.08) map[y][x] = (rand()<0.8? T.Door : T.Lock);
+    }
+
+    // place stairs and orb
+    const r1 = choice(rooms), r2 = choice(rooms);
+    const px = r1.x + (r1.w>>1), py = r1.y + (r1.h>>1);
+    player.x=px; player.y=py;
+    upPos = {x:px,y:py};
+    function randTileIn(room){ return {x:room.x+1+irand(Math.max(1,room.w-2)), y:room.y+1+irand(Math.max(1,room.h-2))}; }
+    downPos = randTileIn(r2);
+    map[downPos.y][downPos.x]= T.Down;
+    if(level===MAX_DEPTH) { // put Orb here
+      let r = choice(rooms);
+      orbPos = randTileIn(r);
+      map[orbPos.y][orbPos.x] = T.Orb;
+    }
+    // enemies
+    const enemyCount = 5 + irand(4) + level*2;
+    for(let i=0;i<enemyCount;i++){
+      const room = choice(rooms);
+      const p = randTileIn(room);
+      if(map[p.y][p.x]!==T.Floor) continue;
+      if(p.x===player.x && p.y===player.y) continue;
+      const kind = rand()<0.5? 'gob' : (rand()<0.5? 'slm' : 'bat');
+      const stats = kind==='gob' ? {hp:5,atk:2,spd:1,color:'#eab308'} :
+                    kind==='slm' ? {hp:7,atk:1,spd:1,color:'#22c55e'} :
+                                   {hp:3,atk:2,spd:2,color:'#60a5fa'};
+      enemies.push({x:p.x,y:p.y,kind,...stats, act:0});
+    }
+    // items: potions and keys
+    const drops = 3+irand(3);
+    for(let i=0;i<drops;i++){
+      const room=choice(rooms), p=randTileIn(room);
+      if(map[p.y][p.x]!==T.Floor) continue;
+      map[p.y][p.x] = rand()<0.7 ? 'POTION' : 'KEY';
+    }
+  }
+
+  // ===== FOV (Bresenham LOS) =====
+  function isOpaque(x,y){ return map[y][x]===T.Wall || map[y][x]===T.Lock; }
+  function los(ax,ay,bx,by){
+    let x0=ax,y0=ay,x1=bx,y1=by;
+    const dx=Math.abs(x1-x0), sx=x0<x1?1:-1;
+    const dy=-Math.abs(y1-y0), sy=y0<y1?1:-1;
+    let err=dx+dy;
+    while(true){
+      if(!(x0===ax && y0===ay) && isOpaque(x0,y0)) return false;
+      if(x0===x1 && y0===y1) return true;
+      const e2=2*err;
+      if(e2>=dy){ err+=dy; x0+=sx; }
+      if(e2<=dx){ err+=dx; y0+=sy; }
+    }
+  }
+  function computeFOV(){
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      const d=Math.hypot(x-player.x,y-player.y);
+      const vis = d<=FOV_R && los(player.x,player.y,x,y);
+      if(vis) seen[y][x]=true;
+    }
+  }
+
+  // ===== Rendering =====
+  function draw(){
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    // tiles
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      const vis = Math.hypot(x-player.x,y-player.y)<=FOV_R && los(player.x,player.y,x,y);
+      const seenBefore = seen[y][x] || vis;
+      if(seenBefore){
+        const t = map[y][x];
+        let col = (t===T.Wall? COLORS.wall : COLORS.floor);
+        if(t===T.Door) col=COLORS.door;
+        if(t===T.Lock) col=COLORS.lock;
+        if(t===T.Down) col=COLORS.down;
+        if(t===T.Up) col=COLORS.up;
+        if(t===T.Orb) col=COLORS.orb;
+        roundRect(x*TILE,y*TILE,TILE-1,TILE-1,6, col, vis?1:0.45);
+        if(!vis) ctx.globalAlpha=0.35;
+        // item glyphs
+        if(t==='POTION'||t==='KEY'){
+          ctx.fillStyle = t==='POTION' ? '#ef4444' : '#f59e0b';
+          ctx.font = 'bold 16px ui-monospace,monospace';
+          ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(t==='POTION'?'✚':'🔑', x*TILE+TILE/2, y*TILE+TILE/2+1);
+        }
+        ctx.globalAlpha=1;
+      } else {
+        roundRect(x*TILE,y*TILE,TILE-1,TILE-1,6, COLORS.seen, 0.75);
+      }
+    }
+    // enemies (only if visible)
+    for(const e of enemies){
+      if(Math.hypot(e.x-player.x,e.y-player.y)<=FOV_R && los(player.x,player.y,e.x,e.y)){
+        roundRect(e.x*TILE+4,e.y*TILE+4,TILE-9,TILE-9,6, e.color,1);
+        drawGlyph(e.kind==='gob'?'G':(e.kind==='slm'?'S':'B'), e.x,e.y,'#0b1022');
+      }
+    }
+    // player
+    roundRect(player.x*TILE+2, player.y*TILE+2, TILE-5, TILE-5, 8, '#93c5fd',1);
+    drawGlyph('@', player.x, player.y, '#0b1022');
+  }
+  function roundRect(x,y,w,h,r, color,alpha=1){
+    ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle=color;
+    ctx.beginPath();
+    const rr = Math.min(r, w/2, h/2);
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  function drawGlyph(ch, tx,ty, color){
+    ctx.save();
+    ctx.fillStyle=color; ctx.font='bold 16px ui-monospace,monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(ch, tx*TILE+TILE/2, ty*TILE+TILE/2+1);
+    ctx.restore();
+  }
+
+  // ===== Gameplay =====
+  function passable(x,y){
+    const t=map[y][x];
+    return t===T.Floor||t===T.Door||t===T.Down||t===T.Up||t===T.Orb||t==='POTION'||t==='KEY';
+  }
+  function enemyAt(x,y){ return enemies.find(e=>e.x===x&&e.y===y); }
+
+  function move(dx,dy){
+    const nx=clamp(player.x+dx,0,W-1), ny=clamp(player.y+dy,0,H-1);
+    if(nx===player.x && ny===player.y){ turn(); return; }
+    if(map[ny][nx]===T.Lock){
+      if(player.keys>0){ player.keys--; map[ny][nx]=T.Door; pushLog('Unlocked a door.'); }
+      else { pushLog('A locked door bars the way.'); return; }
+    }
+    const foe = enemyAt(nx,ny);
+    if(foe){ // attack
+      foe.hp -= player.atk;
+      pushLog(`You hit the ${foe.kind} for ${player.atk}.`);
+      if(foe.hp<=0){
+        enemies = enemies.filter(z=>z!==foe);
+        if(rand()<0.25){ map[ny][nx]='POTION'; pushLog('It dropped a potion.'); }
+      }
+    } else if(passable(nx,ny)){
+      player.x=nx; player.y=ny;
+      // interact
+      const t = map[ny][nx];
+      if(t==='POTION'){ player.hp=Math.min(player.hpmax, player.hp+5); map[ny][nx]=T.Floor; pushLog('You drink a potion (+5 HP).'); }
+      if(t==='KEY'){ player.keys++; map[ny][nx]=T.Floor; pushLog('You found a key.'); }
+      if(t===T.Orb){ player.hasOrb=true; map[ny][nx]=T.Floor; pushLog('You claim the ✦ ORB ✦. Get back to the entrance!'); }
+      if(t===T.Down){ // next depth
+        if(depth<MAX_DEPTH){ depth++; generate(depth); pushLog(`Descend to depth ${depth}.`); }
+      }
+      if(t===T.Up){
+        if(depth===1){
+          if(player.hasOrb){ pushLog('You escape with the ORB. Victory!'); saveClear(); }
+          else { pushLog('You can leave… but the Orb remains below.'); }
+        } else {
+          depth--; generate(depth); pushLog(`Ascend to depth ${depth}.`);
+        }
+      }
+    }
+    turn();
+  }
+
+  function turn(){
+    // enemies act
+    for(const e of enemies){
+      // speed gate
+      e.act = (e.act+e.spd)%2; if(e.act!==0) continue;
+      // if adjacent to player -> attack
+      if(Math.abs(e.x-player.x)+Math.abs(e.y-player.y)===1){
+        player.hp -= e.atk;
+        pushLog(`The ${e.kind} hits you for ${e.atk}.`);
+        if(player.hp<=0){ pushLog('You died. New run?'); saveClear(); newRun(seed); return; }
+        continue;
+      }
+      // otherwise, pursue if within 8 tiles and LOS; else wander
+      const dist = Math.hypot(e.x-player.x,e.y-player.y);
+      if(dist<=8 && los(e.x,e.y,player.x,player.y)){
+        const dx = Math.sign(player.x - e.x), dy = Math.sign(player.y - e.y);
+        const opts = [{x:e.x+dx,y:e.y},{x:e.x,y:e.y+dy},{x:e.x+dx,y:e.y+dy},{x:e.x-dx,y:e.y},{x:e.x,y:e.y-dy}];
+        for(const o of opts){
+          if(o.x<0||o.y<0||o.x>=W||o.y>=H) continue;
+          if(!passable(o.x,o.y)) continue;
+          if(enemyAt(o.x,o.y)) continue;
+          e.x=o.x; e.y=o.y; break;
+        }
+      } else {
+        const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
+        const [dx,dy]=choice(dirs);
+        const nx=e.x+dx, ny=e.y+dy;
+        if(nx>=0&&ny>=0&&nx<W&&ny<H && passable(nx,ny) && !enemyAt(nx,ny) && !(nx===player.x&&ny===player.y)){ e.x=nx; e.y=ny; }
+      }
+    }
+    // UI update
+    computeFOV(); draw(); updateHUD(); saveAuto();
+  }
+
+  function updateHUD(){
+    depthEl.textContent = depth;
+    hpEl.textContent = player.hp; hpMaxEl.textContent = player.hpmax; atkEl.textContent = player.atk;
+    const pct = Math.max(0, Math.min(1, player.hp/player.hpmax))*100;
+    hpFillEl.style.width = pct+'%';
+  }
+
+  // ===== Input =====
+  const keys = {'ArrowUp':[0,-1],'KeyW':[0,-1],'ArrowDown':[0,1],'KeyS':[0,1],'ArrowLeft':[-1,0],'KeyA':[-1,0],'ArrowRight':[1,0],'KeyD':[1,0]};
+  document.addEventListener('keydown', (e)=>{
+    if(e.repeat) return;
+    if(e.code in keys){ e.preventDefault(); const [dx,dy]=keys[e.code]; move(dx,dy); }
+    else if(e.key==='.' ){ e.preventDefault(); turn(); } // wait
+    else if(e.key==='g'){ e.preventDefault(); // pick up (! used automatically)
+      pushLog('Nothing to pick up. (Items auto-pickup)');
+    }
+    else if(e.key==='n'){ e.preventDefault(); newRun(); }
+    else if(e.key==='h'){ e.preventDefault(); pushLog('Tip: doors may be locked. Keys open them.'); }
+  });
+
+  // click/tap -> step towards clicked cell if adjacent in straight/diag line; otherwise nudge smartly
+  cvs.addEventListener('click', (e)=>{
+    const rect=cvs.getBoundingClientRect();
+    const x = Math.floor((e.clientX-rect.left)/rect.width* (cvs.width)/TILE);
+    const y = Math.floor((e.clientY-rect.top)/rect.height* (cvs.height)/TILE);
+    const dx = Math.sign(x-player.x), dy = Math.sign(y-player.y);
+    if(Math.abs(x-player.x)>Math.abs(y-player.y)) move(dx,0); else move(0,dy);
+  }, {passive:true});
+
+  // ===== Save/Load =====
+  function saveAuto(){
+    const obj = {seed, depth, player, map, seen, enemies, upPos, downPos, orbPos};
+    try{ localStorage.setItem(saveKey, JSON.stringify(obj)); localStorage.setItem('mr_last_seed', seed); }catch{}
+  }
+  function loadIfAny(){
+    try{
+      const raw=localStorage.getItem(saveKey);
+      if(!raw) return false;
+      const o=JSON.parse(raw);
+      seed=o.seed; rand=mulberry32(xmur3(seed)());
+      depth=o.depth; player=o.player; map=o.map; seen=o.seen; enemies=o.enemies; upPos=o.upPos; downPos=o.downPos; orbPos=o.orbPos;
+      pushLog(`Loaded saved run (seed ${seed}).`);
+      computeFOV(); draw(); updateHUD(); seedLabel.textContent=seed; return true;
+    }catch{ return false; }
+  }
+  function saveClear(){ try{ localStorage.removeItem(saveKey); }catch{} }
+
+  function newRun(forceSeed){
+    const custom = seedInput.value.trim();
+    seed = forceSeed || custom || Math.floor(Math.random()*1e9).toString();
+    rand = mulberry32(xmur3(seed)());
+    depth=1; player={x:0,y:0,hp:10,hpmax:10,atk:2,keys:0,hasOrb:false};
+    messageLog=[]; logEl.innerHTML='';
+    seedLabel.textContent=seed;
+    generate(depth); computeFOV(); draw(); updateHUD();
+    pushLog(`A new run begins. Seed ${seed}.`);
+    saveAuto();
+  }
+  function saveQuit(){
+    saveAuto(); pushLog('Saved. You can close the tab.');
+  }
+
+  // ===== Boot =====
+  if(!loadIfAny()){
+    generate(depth);
+    computeFOV(); draw(); updateHUD();
+    pushLog(`Welcome to Micro Rogue. Seed ${seed}.`);
+  }
+})();
+</script>
+</body>
+</html>

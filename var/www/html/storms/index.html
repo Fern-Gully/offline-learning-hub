@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>QLD Storm / Flood / Cyclone Warnings — Local Cache</title>
+  <link rel="icon" href="/favicon.ico">
+  <!-- Local Leaflet assets -->
+  <link rel="stylesheet" href="/storms/vendor/leaflet/leaflet.css"/>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#0e1520; --b:#1f2a38; --fg:#eef2f7; --muted:#9fb0c3;
+      --lvl-severe:#d32f2f; --lvl-watch:#f57c00; --lvl-advice:#1976d2; --lvl-unk:#607d8b;
+      --warn:#f7d8d8; --warn-text:#7b1f1f;
+    }
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+    header{padding:12px 16px;background:#0d141f;border-bottom:1px solid var(--b)}
+    main{display:grid;grid-template-columns:360px 1fr;gap:12px;padding:12px}
+    #list{max-height:calc(100vh - 80px);overflow:auto;background:var(--panel);border:1px solid var(--b);border-radius:10px;padding:10px}
+    #map{height:calc(100vh - 80px);border:1px solid var(--b);border-radius:10px;background:#0a0a0a}
+    .muted{color:var(--muted);font-size:12px}
+    .card{padding:10px;border-radius:8px;border:1px solid var(--b);margin-bottom:10px;background:#0b111a;cursor:pointer}
+    .badge{display:inline-block;font-size:11px;padding:2px 6px;border-radius:999px;margin-left:6px}
+    .lvl-severe{background:var(--lvl-severe);color:white}
+    .lvl-watch{background:var(--lvl-watch);color:black}
+    .lvl-advice{background:var(--lvl-advice);color:white}
+    .lvl-unk{background:var(--lvl-unk);color:white}
+    .legend{position:absolute;right:16px;top:92px;background:rgba(13,20,31,.9);padding:8px 10px;border:1px solid var(--b);border-radius:8px}
+    .legend div{display:flex;align-items:center;gap:8px;margin:4px 0}
+    .swatch{width:14px;height:14px;border-radius:3px;border:1px solid #0003}
+    .srch{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+    .srch input[type="text"], .srch input[type="search"], .srch input#q{
+      flex:1;padding:8px;border-radius:8px;border:1px solid var(--b);background:#0b111a;color:var(--fg)
+    }
+    .banner{margin:8px 0;padding:8px 10px;border-radius:8px;background:var(--warn);color:var(--warn-text);border:1px solid #f0c7c7}
+    label.muted{user-select:none;cursor:pointer}
+    label.muted input{accent-color:#7aa7ff}
+  </style>
+</head>
+<body>
+<header>
+  <h1 style="margin:0; font-size:18px">QLD Storm / Flood / Cyclone Warnings (local cache)</h1>
+  <div id="diag" class="muted">Booting…</div>
+</header>
+<main>
+  <section id="list">
+    <div class="srch">
+      <input id="q" placeholder="Filter by area/title/severity…" />
+      <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:12px">
+        <input id="showAll" type="checkbox"/> Show older
+      </label>
+    </div>
+    <div id="meta" class="muted">Loading…</div>
+    <div id="empty" class="banner" style="display:none">No current storm warnings.</div>
+    <div id="cards"></div>
+  </section>
+  <section id="map"></section>
+</main>
+
+<div class="legend">
+  <div><span class="swatch" style="background:var(--lvl-severe)"></span> Severe / Warning</div>
+  <div><span class="swatch" style="background:var(--lvl-watch)"></span> Watch</div>
+  <div><span class="swatch" style="background:var(--lvl-advice)"></span> Advice / Minor</div>
+  <div><span class="swatch" style="background:var(--lvl-unk)"></span> Unknown</div>
+</div>
+
+<!-- Local Leaflet script -->
+<script src="/storms/vendor/leaflet/leaflet.js"></script>
+<script>
+/* ---------- basic diag ---------- */
+const DIAG  = document.getElementById('diag');
+function logd(msg){ try{console.log(msg);}catch(e){} DIAG.textContent = msg; }
+
+/* ---------- utils: safe text & HTML ---------- */
+function escapeHtml(str) {
+  const s = (str ?? "").toString();
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+function brify(str) { return escapeHtml(str).replace(/\r?\n/g, "<br/>"); }
+
+/* ---------- DOM handles ---------- */
+const META  = document.getElementById('meta');
+const CARDS = document.getElementById('cards');
+const QUERY = document.getElementById('q');
+const EMPTY = document.getElementById('empty');
+const SHOW_ALL = document.getElementById('showAll');
+
+/* ---------- map ---------- */
+if (!window.L) { logd("Leaflet failed to load."); }
+const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([-22.5, 145], 5);
+const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:18, detectRetina:true });
+tiles.on('tileerror', () => {}); // offline OK
+tiles.addTo(map);
+
+/* ---------- styling ---------- */
+function lvlColor(p) {
+  const fields = [p.Severity, p.WarningLevel, p.SeverityLevel, p.Event, p.EventType, p.WarningType_Level]
+    .map(x => (x || '').toString().toLowerCase());
+  const s = fields.join(' ');
+  if (s.includes('severe') || s.includes('warning')) return 'var(--lvl-severe)';
+  if (s.includes('watch')) return 'var(--lvl-watch)';
+  if (s.includes('advice') || s.includes('minor')) return 'var(--lvl-advice)';
+  return 'var(--lvl-unk)';
+}
+
+/* ---------- time helpers & active filter ---------- */
+const ACTIVE_WINDOW_HOURS = 72;  // consider issued items active if no explicit expiry and under this age
+function parseISO(s) { try { const d = new Date(s); return isNaN(d) ? null : d; } catch { return null; } }
+function orDates(props, keys) {
+  for (const k of keys) {
+    const v = props[k]; if (!v) continue;
+    const d = parseISO(v); if (d) return d;
+  }
+  return null;
+}
+/** Decide whether a feature is "active" now */
+function isActiveFeature(f, now = new Date()) {
+  const p = f.properties || {};
+
+  // Known expiry-like fields across QLD feeds / CAP-ish payloads
+  const expiry = orDates(p, [
+    'ItemExpiryDateTimeLocal_ISO','ExpiryDateTimeLocal_ISO','Expires','Expiry','expiry','expires','validTo'
+  ]);
+
+  // Publish/issue/update fields
+  const issued = orDates(p, [
+    'PublishDateLocal_ISO','ItemDateTimeLocal_ISO','Issued','Updated','Effective','Sent','published','updated'
+  ]);
+
+  // Prefer explicit expiry when present
+  if (expiry) return now <= expiry;
+
+  // Otherwise, treat as active if recently issued
+  if (issued) {
+    const ageHrs = Math.abs(now - issued) / 36e5;
+    return ageHrs <= ACTIVE_WINDOW_HOURS;
+  }
+  return false; // conservative when no timestamps available
+}
+
+/* ---------- data state ---------- */
+let features = [];
+let geoLayer = null;
+const idxToLayer = new Map();
+
+/* ---------- text builders (escaped) ---------- */
+function primaryText(p) {
+  const title = p.WarningTitle || p.Headline || p.Title || p.Event || 'Storm Warning';
+  const area  = p.WarningArea || p.Area || p.Areas || p.Location || '';
+  const sev   = p.Severity || p.WarningLevel || p.SeverityLevel || p.WarningType_Level || 'Unknown';
+  const upd   = p.PublishDateLocal_ISO || p.Issued || p.Updated || p.ItemDateTimeLocal_ISO || '';
+  return { title: escapeHtml(title), area: escapeHtml(area), sev: escapeHtml(sev), upd: escapeHtml(upd),
+           long: p.Message || p.Description || p.Summary || '' };
+}
+
+function popupHtml(p) {
+  const { title, area, sev, upd, long } = primaryText(p);
+  const sevLower = sev.toLowerCase();
+  const cls = sevLower.includes('severe') || sevLower.includes('warning') ? 'lvl-severe'
+           : sevLower.includes('watch') ? 'lvl-watch'
+           : (sevLower.includes('advice') || sevLower.includes('minor')) ? 'lvl-advice'
+           : 'lvl-unk';
+  const longHtml = long ? `<div style="margin-top:6px">${brify(long)}</div>` : '';
+  return `
+    <div style="min-width:260px">
+      <strong>${title}</strong> <span class="badge ${cls}">${sev}</span>
+      ${area ? `<div class="muted" style="margin-top:4px">${area}</div>` : ''}
+      ${upd  ? `<div class="muted" style="margin-top:4px">Updated: ${upd}</div>` : ''}
+      ${longHtml}
+    </div>`;
+}
+
+function cardHtml(p, idx) {
+  const { title, area, sev, upd } = primaryText(p);
+  const sevLower = sev.toLowerCase();
+  const cls = sevLower.includes('severe') || sevLower.includes('warning') ? 'lvl-severe'
+           : sevLower.includes('watch') ? 'lvl-watch'
+           : (sevLower.includes('advice') || sevLower.includes('minor')) ? 'lvl-advice'
+           : 'lvl-unk';
+  return `
+    <div class="card" data-idx="${idx}">
+      <div><strong>${title}</strong> <span class="badge ${cls}">${sev}</span></div>
+      ${area ? `<div class="muted">${area}</div>` : ''}
+      ${upd  ? `<div class="muted">Updated: ${upd}</div>` : ''}
+    </div>`;
+}
+
+/* ---------- renderers ---------- */
+function buildLayer(fc) {
+  if (geoLayer) { geoLayer.remove(); geoLayer = null; }
+  idxToLayer.clear();
+  let i = -1;
+  geoLayer = L.geoJSON(fc, {
+    style: (f) => {
+      const c = lvlColor(f.properties || {});
+      return { color: c, weight: 2, fillColor: c, fillOpacity: 0.15 };
+    },
+    pointToLayer: (f, latlng) => {
+      const c = lvlColor(f.properties || {});
+      return L.circleMarker(latlng, { radius: 6, color: c, weight: 2, fillColor: c, fillOpacity: 0.8 });
+    },
+    onEachFeature: (f, layer) => {
+      i += 1;
+      layer.bindPopup(popupHtml(f.properties || {}));
+      idxToLayer.set(i, layer);
+    }
+  }).addTo(map);
+
+  try {
+    const b = geoLayer.getBounds();
+    if (b.isValid()) map.fitBounds(b.pad(0.1));
+  } catch(_) {}
+}
+
+function renderList(items) {
+  CARDS.innerHTML = items.map((f, idx) => cardHtml(f.properties || {}, idx)).join('');
+  CARDS.querySelectorAll('.card').forEach((el) => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.getAttribute('data-idx'), 10);
+      const layer = idxToLayer.get(idx);
+      if (!layer) return;
+      try {
+        const b = layer.getBounds?.();
+        if (b && b.isValid()) map.fitBounds(b.pad(0.2));
+        else if (layer.getLatLng) map.setView(layer.getLatLng(), 11);
+        layer.openPopup();
+      } catch(_) {}
+    });
+  });
+}
+
+/* Filter + render current selection */
+function renderCurrent() {
+  const base = SHOW_ALL.checked ? features : features.filter(f => isActiveFeature(f));
+  const q = (QUERY.value || '').toLowerCase().trim();
+  const filtered = q
+    ? base.filter((f) => {
+        const t = primaryText(f.properties || {});
+        return (t.title + ' ' + t.area + ' ' + t.sev).toLowerCase().includes(q);
+      })
+    : base;
+
+  buildLayer({ type:"FeatureCollection", features: filtered });
+  renderList(filtered);
+  EMPTY.style.display = filtered.length ? 'none' : 'block';
+}
+
+/* ---------- boot ---------- */
+QUERY.addEventListener('input', renderCurrent);
+SHOW_ALL.addEventListener('change', renderCurrent);
+
+(async function load() {
+  logd('Loading status…');
+  let ok = null, note = null, ts = null;
+  try {
+    const st = await fetch('status.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
+    ok = st?.ok ?? null; note = st?.note ?? null; ts = st?.fetched_at_utc ?? null;
+  } catch (e) { console.warn('status.json failed', e); }
+
+  logd('Loading data…');
+  try {
+    const root = await fetch('storm_warnings.json', { cache: 'no-store' }).then(r => r.json());
+    const fc = (root && Array.isArray(root.features))
+      ? root
+      : (Array.isArray(root) ? { type:"FeatureCollection", features: root } : { type:"FeatureCollection", features: [] });
+
+    features = fc.features;
+
+    // meta summary
+    const activeCount = features.reduce((n,f)=> n + (isActiveFeature(f) ? 1 : 0), 0);
+    const parts = [];
+    if (ok === true && ts) parts.push(`Last fetch (UTC): ${ts}`);
+    parts.push(`Active: ${activeCount} / ${features.length}`);
+    if (note) parts.push(note);
+    META.textContent = parts.join(' — ') || 'No status yet.';
+
+    logd(`Ready — features: ${features.length}, active: ${activeCount}`);
+    renderCurrent();
+  } catch (e) {
+    logd('Could not load storm_warnings.json');
+    META.textContent = 'Could not load storm_warnings.json';
+    console.error('storms: storm_warnings.json load failed', e);
+  }
+})();
+</script>
+</body>
+</html>

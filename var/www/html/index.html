@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>library — LAN tools</title>
+  <link rel="stylesheet" href="/lan.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>library</h1>
+      <p class="tagline">Your local offline-first portal for bushfire & storm warnings, games, and reference.</p>
+    </div>
+  </header>
+
+  <main class="wrap portal">
+    <!-- QFD Bushfire Warnings -->
+    <a class="card" href="/qfd/" aria-label="Open QFD Bushfire Warnings">
+      <div class="card-icon" aria-hidden="true">
+        <!-- flame icon -->
+        <svg viewBox="0 0 24 24" role="img"><path d="M13.5 2.5s.5 3-2 5c-1.5 1.3-2 2.5-2 3.8 0 1.7 1.3 3 3 3 2.6 0 4.5-2.3 4.5-5.2 0-2.9-1.4-5-3.5-6.6zM12.5 14.3c-3 0-5.5-2.3-5.5-5 0-1.1.4-2.2 1-3.1-3 1.7-5 5-5 8.8 0 4.4 3.6 8 8 8s8-3.6 8-8c0-1.8-.6-3.5-1.6-4.9.1 2.8-1.6 6.2-4.9 6.2z"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">
+          QFD Bushfire Warnings
+          <span class="tooltip" data-tip="Live warnings cached locally every ~30 minutes. Map shows polygons or points, works offline with last-known-good data.">?</span>
+        </div>
+        <p class="card-sub">Local cache, updates ~30 min. Map + polygons.</p>
+        <div class="badges">
+          <span id="qfd-status" class="badge is-muted">Checking…</span>
+        </div>
+      </div>
+      <div class="card-cta">Open</div>
+    </a>
+
+    <!-- Storm / Flood / Cyclone Warnings -->
+    <a class="card" href="/storms/" aria-label="Open Storm, Flood and Cyclone Warnings">
+      <div class="card-icon" aria-hidden="true">
+        <!-- storm cloud icon -->
+        <svg viewBox="0 0 24 24" role="img"><path d="M7 18h2l2-3H9l2-3H8l2-3H8a4 4 0 0 0-1 7.874V17a1 1 0 0 0 1 1zm8-12a5 5 0 0 1 4.546 2.916A4 4 0 1 1 17 18h-3l1.2-2H13l1.2-2H12l1.2-2h1.3A5 5 0 0 1 15 6z"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">
+          Storm / Flood / Cyclone Warnings
+          <span class="tooltip" data-tip="Severe weather alerts cached locally every ~30 minutes. Polygons/points render on a simple map for offline reference.">?</span>
+        </div>
+        <p class="card-sub">Local cache, updates ~30 min. Map + polygons.</p>
+        <div class="badges">
+          <span id="storms-status" class="badge is-muted">Checking…</span>
+        </div>
+      </div>
+      <div class="card-cta">Open</div>
+    </a>
+
+    <!-- LAN Arcade -->
+    <a class="card" href="/games/" aria-label="Open LAN Arcade">
+      <div class="card-icon" aria-hidden="true">
+        <!-- gamepad icon -->
+        <svg viewBox="0 0 24 24" role="img"><path d="M6 8c-2.2 0-4 1.8-4 4v2a4 4 0 0 0 4 4h2l2-2h4l2 2h2a4 4 0 0 0 4-4v-2c0-2.2-1.8-4-4-4H6zm1 2h2v2h2v2H9v2H7v-2H5v-2h2v-2zM16.5 12a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm2.5-1a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">
+          LAN Arcade
+          <span class="tooltip" data-tip="A friendly index of locally hosted games on this Raspberry Pi. All on your LAN.">?</span>
+        </div>
+        <p class="card-sub">Games hosted on this Pi.</p>
+      </div>
+      <div class="card-cta">Play</div>
+    </a>
+
+    <!-- Kiwix Library -->
+    <a class="card" href="http://library.local:8080/" aria-label="Open Kiwix Library">
+      <div class="card-icon" aria-hidden="true">
+        <!-- book icon -->
+        <svg viewBox="0 0 24 24" role="img"><path d="M5 3h9a3 3 0 0 1 3 3v12a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h9V6a1 1 0 0 0-1-1H5z"/></svg>
+      </div>
+      <div class="card-body">
+        <div class="card-title">
+          Kiwix Library
+          <span class="tooltip" data-tip="Offline Wikipedia and curated reference content through Kiwix. Fast, local, and private.">?</span>
+        </div>
+        <p class="card-sub">Offline reference via Kiwix.</p>
+      </div>
+      <div class="card-cta">Browse</div>
+    </a>
+  </main>
+
+  <footer class="wrap site-footer">
+    <div class="muted">Local services run on your Raspberry Pi. If a section looks stale, the Pi may be offline; data views keep the last-known-good copy.</div>
+  </footer>
+
+  <script>
+    // Progressive enhancement: read local status.json for “last updated” chips (no external calls).
+    (async function () {
+      const fmt = (iso) => {
+        try {
+          const d = new Date(iso);
+          return isNaN(d) ? null : d.toLocaleString();
+        } catch { return null; }
+      };
+      const set = (id, ok, note, ts) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (ok === true) {
+          el.className = 'badge is-good';
+          el.textContent = ts ? `Updated: ${ts}` : (note || 'OK');
+        } else if (ok === false) {
+          el.className = 'badge is-warn';
+          el.textContent = 'Fetch failed';
+        } else {
+          el.className = 'badge is-muted';
+          el.textContent = 'Unknown';
+        }
+      };
+      try {
+        const qfd = await fetch('/qfd/status.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
+        set('qfd-status', qfd?.ok, qfd?.note, fmt(qfd?.fetched_at_utc));
+      } catch { set('qfd-status'); }
+      try {
+        const st = await fetch('/storms/status.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
+        set('storms-status', st?.ok, st?.note, fmt(st?.fetched_at_utc));
+      } catch { set('storms-status'); }
+    })();
+  </script>
+</body>
+</html>
+

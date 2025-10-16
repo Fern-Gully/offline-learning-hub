@@ -1,0 +1,1003 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FluxGrid — Tri-Color Network</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<style>
+  :root{
+    --bg:#0b0f1a;--bg2:#101528;--fg:#e7ecf6;--muted:#aab3c5;--accent:#6aa9ff;--accent2:#9b7bff;
+    --good:#2ecc71;--bad:#ff5d73;--warn:#ffc857;--panel:#131a2d;--stroke:#223054;--glass:rgba(255,255,255,.06);
+    --r:#ff5c5c;--g:#66ff7a;--b:#7ab3ff;--w:#ffffff;
+  }
+  html,body{margin:0;height:100%;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--fg);font:14px/1.35 system-ui,Segoe UI,Roboto,Inter,Arial}
+  #root{display:grid;grid-template-rows:auto 1fr auto;min-height:100vh}
+  header,footer{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.15));border-bottom:1px solid var(--stroke);padding:10px 14px}
+  footer{border-top:1px solid var(--stroke);border-bottom:0}
+  h1{margin:0;font-weight:700;letter-spacing:.3px;font-size:18px;display:flex;gap:10px;align-items:center}
+  h1 .badge{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0a0f1a}
+  #game{display:grid;grid-template-columns:320px 1fr;gap:12px;padding:12px}
+  #left{background:var(--panel);border:1px solid var(--stroke);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+  #right{background:var(--panel);border:1px solid var(--stroke);border-radius:16px;padding:12px;display:grid;grid-template-rows:auto 1fr}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .btn{padding:8px 10px;border:1px solid var(--stroke);background:var(--glass);backdrop-filter:blur(6px);border-radius:10px;color:var(--fg);cursor:pointer;user-select:none}
+  .btn:hover{border-color:#4263eb}
+  .btn[disabled]{opacity:.4;pointer-events:none}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#0b0f1a;border-color:transparent;font-weight:700}
+  .btn.ghost{background:transparent}
+  .pill{padding:4px 8px;border-radius:999px;background:var(--glass);border:1px solid var(--stroke);font-size:12px}
+  .grid-wrap{position:relative;display:grid;place-items:center}
+  canvas{background:#0e1427;border-radius:12px;border:1px solid var(--stroke);touch-action:none}
+  .section{border-top:1px dashed var(--stroke);padding-top:10px;margin-top:6px}
+  .toolbar{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+  .tool{padding:10px;border:1px solid var(--stroke);background:var(--glass);border-radius:10px;text-align:center;cursor:pointer;user-select:none}
+  .tool.active{outline:2px solid var(--accent)}
+  .tool small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+  .k{font-family:ui-monospace,Consolas,monospace;background:#0c1226;border:1px solid var(--stroke);padding:2px 6px;border-radius:6px;font-size:12px}
+  .list{display:flex;flex-direction:column;gap:6px}
+  .level{display:flex;justify-content:space-between;align-items:center;padding:8px;border:1px solid var(--stroke);background:var(--glass);border-radius:10px}
+  .level.locked{opacity:.45}
+  .level .stars{color:var(--warn)}
+  .money{color:var(--good);font-weight:700}
+  .danger{color:var(--bad)}
+  .ok{color:var(--good)}
+  .chip{display:inline-flex;gap:6px;align-items:center;padding:4px 8px;border-radius:999px;background:var(--glass);border:1px solid var(--stroke)}
+  .shop-card{display:flex;justify-content:space-between;gap:10px;padding:10px;border:1px solid var(--stroke);border-radius:12px;background:var(--glass)}
+  .hint{color:var(--muted);font-size:12px}
+  details{background:var(--glass);border:1px solid var(--stroke);padding:8px;border-radius:10px}
+  details>summary{cursor:pointer}
+  /* Color dots */
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px;border:1px solid #0003}
+  .dot.r{background:var(--r)}
+  .dot.g{background:var(--g)}
+  .dot.b{background:var(--b)}
+  .dot.w{background:var(--w)}
+  @media (max-width: 980px){
+    #game{grid-template-columns:1fr;grid-template-rows:auto auto}
+  }
+</style>
+</head>
+<body>
+<div id="root">
+  <header>
+    <h1>FluxGrid <span class="badge">offline • HTML5</span></h1>
+  </header>
+
+  <main id="game">
+    <div id="left">
+      <div class="row" id="topBar">
+        <button class="btn" id="btnMenu">◀ Menu</button>
+        <span class="pill">Level <b id="levelName">-</b></span>
+        <span class="pill">Moves <b id="moves">0</b></span>
+        <span class="pill">Time <b id="time">0:00</b></span>
+        <span class="pill">Credits <b class="money" id="credits">0</b></span>
+      </div>
+
+      <div class="section">
+        <div class="row" style="justify-content:space-between">
+          <div class="row">
+            <span class="chip"><span class="dot r"></span>Red</span>
+            <span class="chip"><span class="dot g"></span>Green</span>
+            <span class="chip"><span class="dot b"></span>Blue</span>
+          </div>
+          <div class="row">
+            <button class="btn" id="btnReset">↺ Reset</button>
+            <button class="btn" id="btnUndo">⟲ Undo</button>
+            <button class="btn primary" id="btnCheck">✔ Check</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="row"><b>Inventory</b></div>
+        <div id="inv" class="toolbar"></div>
+        <div class="hint">Left-click to place. Right-click to rotate. <span class="k">E</span>/<span class="k">Q</span> cycles tools. <span class="k">F</span> changes filter color. <span class="k">Del</span> erases.</div>
+      </div>
+
+      <div class="section">
+        <div class="row" style="justify-content:space-between">
+          <b>Upgrades</b>
+          <button class="btn" id="btnShop">🛒 Shop</button>
+        </div>
+        <div id="upgList" class="list"></div>
+      </div>
+
+      <details class="section">
+        <summary><b>How to play</b></summary>
+        <div class="hint">
+          Connect colored sources to matching terminals using pieces from your inventory. Colors mix additively (R+G+B). Filters pass only their color. T and Cross junctions split and mix flows. Satisfy all terminals at once to win.
+        </div>
+      </details>
+
+      <div class="section">
+        <div class="row" style="justify-content:space-between">
+          <b>Level Select</b>
+          <button class="btn ghost" id="btnNew">New Game</button>
+        </div>
+        <div id="levels" class="list"></div>
+      </div>
+    </div>
+
+    <div id="right">
+      <div class="row" style="justify-content:space-between">
+        <div class="row"><b>Board</b><span class="pill">Targets <b id="targetsOk">0</b>/<b id="targetsAll">0</b></span></div>
+        <div class="row">
+          <span class="pill">Best <b id="bestScore">—</b></span>
+          <span class="pill">Stars <b id="bestStars">—</b></span>
+        </div>
+      </div>
+      <div class="grid-wrap">
+        <canvas id="canvas" width="880" height="640"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="row" style="justify-content:space-between">
+      <div>Made for local, offline fun. Saves live in <span class="k">localStorage</span>.</div>
+      <div class="hint">© FluxGrid. Single-file, no libs.</div>
+    </div>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /*** --- Core Types & Data ---------------------------------------------- ***/
+  const DIRS = [{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}]; // R,D,L,U clockwise
+  const C = { R:1, G:2, B:4, ALL:7 }; // bitmask colors
+  const TILE = {
+    EMPTY:0, WALL:1,
+    SRC_R:2, SRC_G:3, SRC_B:4,
+    TERM_R:5, TERM_G:6, TERM_B:7, TERM_W:8,
+    STRA:9, CORN:10, TJUNC:11, CROSS:12,
+    FILT:13, // filter carries one of R/G/B in meta
+  };
+  const TILE_NAME = {
+    [TILE.EMPTY]:"Empty", [TILE.WALL]:"Wall",
+    [TILE.SRC_R]:"Source R", [TILE.SRC_G]:"Source G", [TILE.SRC_B]:"Source B",
+    [TILE.TERM_R]:"Terminal R", [TILE.TERM_G]:"Terminal G", [TILE.TERM_B]:"Terminal B", [TILE.TERM_W]:"Terminal White",
+    [TILE.STRA]:"Straight", [TILE.CORN]:"Corner", [TILE.TJUNC]:"T-Junction", [TILE.CROSS]:"Cross",
+    [TILE.FILT]:"Filter",
+  };
+
+  const COLORS = {
+    0:"#7a8aad", 1:"#ff5c5c", 2:"#66ff7a", 4:"#7ab3ff", 3:"#ffd05a", 5:"#ff8de0", 6:"#86e7ff", 7:"#ffffff"
+  };
+
+  // Tool palette order
+  const TOOLS = [
+    {id:TILE.STRA, key:'1', label:'Straight'},
+    {id:TILE.CORN, key:'2', label:'Corner'},
+    {id:TILE.TJUNC, key:'3', label:'T-Junction'},
+    {id:TILE.CROSS, key:'4', label:'Cross'},
+    {id:TILE.FILT, key:'F', label:'Filter'},
+    {id:-1, key:'X', label:'Eraser'}
+  ];
+
+  // Upgrades meta
+  const SHOP = [
+    {id:"more_t", name:"+2 T-Junctions", desc:"Adds 2 T pieces to each level’s inventory.", cost:120, once:true},
+    {id:"unlock_cross", name:"Unlock Crossroads", desc:"Enables Cross pieces from Level 5 onward.", cost:160, once:true},
+    {id:"filters_plus", name:"Color Filters+", desc:"Start with one extra Filter piece per level.", cost:140, once:true},
+    {id:"optimizer", name:"Path Optimizer", desc:"Highlights dead-end placements that carry no flux.", cost:110, once:true},
+    {id:"undo_plus", name:"Deep Undo", desc:"Increases undo depth to 100.", cost:90, once:true},
+  ];
+
+  /*** --- Level Definitions ------------------------------------------------ ***/
+  // Level map legend:
+  // '.' empty, '#' wall, 'R/G/B' source, 'r/g/b' terminal single, 'w' terminal white (RGB).
+  // Each level also defines a baseline inventory {STRA, CORN, TJUNC, CROSS, FILT}.
+  // Cross is locked until upgrade or after certain level.
+  const LEVELS = [
+    L("01 • Primer",[
+      "............",
+      "....R.......",
+      "............",
+      ".......r....",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+    ], inv(8,6,2,0,0)),
+    L("02 • Duality",[
+      "............",
+      "...R....G...",
+      "............",
+      "..r......g..",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+    ], inv(10,8,3,0,0)),
+    L("03 • L-Turns",[
+      "............",
+      "R......#....",
+      "......#.....",
+      "......#....r",
+      ".#....#.....",
+      ".#....#.....",
+      ".#....#.....",
+      "G.....#....g",
+      "............",
+      "............",
+    ], inv(8,10,4,0,0)),
+    L("04 • Mixology",[
+      "............",
+      "..R.....G...",
+      "............",
+      ".....w......",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+      "............",
+    ], inv(12,10,5,0,1)),
+    L("05 • Triad",[
+      "............",
+      "R.......#..B",
+      ".....#......",
+      ".....#..w...",
+      "..#..#......",
+      "..#..#......",
+      "G#..........",
+      "............",
+      "............",
+      "............",
+    ], inv(12,12,6,2,2)),
+    L("06 • Gatekeeper",[
+      "............",
+      ".#####......",
+      ".#R..#..r...",
+      ".#...#......",
+      ".#...#..g...",
+      ".#...#......",
+      ".#..G#..b...",
+      ".#####......",
+      "............",
+      "............",
+    ], inv(14,12,6,0,3)),
+    L("07 • Crossroads",[
+      "..R.....#...",
+      ".....#......",
+      ".....#...w..",
+      ".....#......",
+      ".....#..#...",
+      ".....#..#...",
+      ".....#..#..G",
+      ".....#..#...",
+      ".....#..#...",
+      "..B..#..#...",
+    ], inv(12,10,6,3,3)),
+    L("08 • Filters 101",[
+      "............",
+      "R..#.....G..",
+      ".#.#..#.....",
+      ".#.#..#..w..",
+      ".#.#..#.....",
+      ".#.#..#..B..",
+      "............",
+      "............",
+      "............",
+      "............",
+    ], inv(14,10,6,2,5)),
+    L("09 • Tri-Weave",[
+      "R..#.....#..",
+      "...#..w..#..",
+      "...#.....#..",
+      "...#######..",
+      "...#.....#..",
+      "...#..w..#..",
+      "B..#.....#G.",
+      "............",
+      "............",
+      "............",
+    ], inv(18,14,7,4,4)),
+    L("10 • Signal City",[
+      "R...#....B..",
+      ".#..#..#....",
+      ".#..w..#....",
+      ".#.....#....",
+      ".#####.#....",
+      ".#.....#....",
+      ".#..w..#..G.",
+      ".#.....#....",
+      "............",
+      "............",
+    ], inv(18,14,8,4,5)),
+    L("11 • Colorswitch",[
+      ".R.....#....",
+      ".......#..w.",
+      ".#####.#....",
+      ".....#.#....",
+      "..w..#.#..G.",
+      ".....#.#....",
+      ".#####.#....",
+      ".....#....B.",
+      "............",
+      "............",
+    ], inv(18,16,8,4,6)),
+    L("12 • Tri-Hub",[
+      "R..#..w..#G.",
+      ".#.#.....#..",
+      ".#.#.###.#..",
+      ".#.#.#B#.#..",
+      ".#.#.###.#..",
+      ".#.#.....#..",
+      "r..#..w..#g.",
+      "............",
+      "............",
+      "............",
+    ], inv(22,18,10,6,6)),
+    L("13 • Weir",[
+      "R..####...w.",
+      "...#..#.....",
+      "...#..#.....",
+      "w..#..#..G..",
+      "...#..#.....",
+      "...#..#.....",
+      "..B####...w.",
+      "............",
+      "............",
+      "............",
+    ], inv(24,18,10,6,7)),
+    L("14 • Forked",[
+      "R......#..g.",
+      "....#..#....",
+      "..w.#..#..G.",
+      "....#..#....",
+      "..g.#..#..B.",
+      "....#..#....",
+      "..w.#..#....",
+      "....#..#....",
+      "............",
+      "............",
+    ], inv(26,18,10,7,7)),
+    L("15 • Knots",[
+      "R.....#.....",
+      ".###..#..###",
+      ".w.#..#..#.w",
+      ".#.#..#..#.#",
+      ".#.#..#..#.#",
+      ".#.#..#..#.#",
+      ".w.#..#..#.w",
+      ".###..#..###",
+      ".....#.....G",
+      "...B........",
+    ], inv(28,20,12,8,8)),
+    L("16 • Finale-I",[
+      "R..#..w..#G.",
+      ".#.#..#..#..",
+      ".#.w..#..#..",
+      ".#.#..#..#..",
+      "w#.#..#..#w.",
+      ".#.#..#..#..",
+      ".#.w..#..#..",
+      ".#.#..#..#..",
+      "B..#..w..#..",
+      "............",
+    ], inv(30,22,14,10,9)),
+  ];
+
+  function inv(stra, corn, tj, cross, filt){ return {STRA:stra, CORN:corn, TJUNC:tj, CROSS:cross, FILT:filt}; }
+  function L(name, map, inventory){ return {name, map, inventory}; }
+
+  /*** --- Persistent Save -------------------------------------------------- ***/
+  const SAVE_KEY = "fluxgrid_save_v1";
+  const SCORE_KEY = "fluxgrid_scores_v1";
+  const defaultSave = () => ({
+    unlocked:1, credits:0, upgrades:{},
+    best:{}, // levelIndex -> {score, stars, time, moves}
+  });
+  let save = load(SAVE_KEY, defaultSave());
+  let scores = load(SCORE_KEY, {});
+
+  function load(k, fallback){
+    try{ const v=JSON.parse(localStorage.getItem(k)||"null"); return v||structuredClone(fallback); }
+    catch{ return structuredClone(fallback); }
+  }
+  function persist(){ localStorage.setItem(SAVE_KEY, JSON.stringify(save)); localStorage.setItem(SCORE_KEY, JSON.stringify(scores)); }
+
+  /*** --- Runtime State ---------------------------------------------------- ***/
+  const CAN = document.getElementById('canvas');
+  const CTX = CAN.getContext('2d');
+  const UI = {
+    btnMenu: byId('btnMenu'), btnReset: byId('btnReset'), btnUndo: byId('btnUndo'),
+    btnCheck: byId('btnCheck'), btnNew: byId('btnNew'), btnShop: byId('btnShop'),
+    moves: byId('moves'), time: byId('time'), credits: byId('credits'),
+    levelName: byId('levelName'), levels: byId('levels'),
+    inv: byId('inv'), upgList: byId('upgList'),
+    targetsOk: byId('targetsOk'), targetsAll: byId('targetsAll'),
+    bestScore: byId('bestScore'), bestStars: byId('bestStars')
+  };
+
+  let current = {
+    levelIndex:0, W:12, H:10, cell:[], meta:[], // meta: orientation 0..3, filterColor bit
+    locked:[], // true if cannot place (wall/src/terminal)
+    inventory:null, // dynamic per level with upgrades applied
+    startTime:0, timer:0, moves:0, undo:[], maxUndo:50,
+    targets:[], sources:[], solved:false,
+  };
+
+  /*** --- Helpers ---------------------------------------------------------- ***/
+  function byId(id){ return document.getElementById(id); }
+  function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
+  function now(){ return performance.now(); }
+  function formatTime(ms){
+    const s = Math.floor(ms/1000), m=Math.floor(s/60), r=s%60;
+    return `${m}:${String(r).padStart(2,'0')}`;
+  }
+  function colorMaskToName(mask){
+    if(mask===1) return 'R'; if(mask===2) return 'G'; if(mask===4) return 'B';
+    if(mask===3) return 'Y'; if(mask===5) return 'M'; if(mask===6) return 'C'; if(mask===7) return 'W';
+    return '-';
+  }
+
+  /*** --- Board Setup ------------------------------------------------------ ***/
+  function startLevel(idx){
+    idx = clamp(idx,0,LEVELS.length-1);
+    const L = LEVELS[idx];
+    current.levelIndex = idx;
+    current.W = L.map[0].length;
+    current.H = L.map.length;
+    current.cell = new Array(current.W*current.H).fill(TILE.EMPTY);
+    current.meta = new Array(current.W*current.H).fill(0);
+    current.locked = new Array(current.W*current.H).fill(false);
+    current.undo = [];
+    current.moves = 0;
+    current.solved = false;
+    current.maxUndo = save.upgrades.undo_plus ? 100 : 50;
+
+    // Inventory with upgrades applied
+    const base = structuredClone(L.inventory);
+    if(save.upgrades.more_t) base.TJUNC += 2;
+    if(save.upgrades.filters_plus) base.FILT += 1;
+    // 'unlock_cross' gates UI availability; still keep per-level counts
+    current.inventory = base;
+
+    current.sources = [];
+    current.targets = [];
+
+    // parse map
+    for(let y=0;y<current.H;y++){
+      const row = L.map[y];
+      for(let x=0;x<current.W;x++){
+        const ch = row[x]; const i = idxOf(x,y);
+        if(ch==='#'){ setCell(i,TILE.WALL,0,true); }
+        else if(ch==='R'){ setCell(i,TILE.SRC_R,0,true); current.sources.push({i,color:C.R}); }
+        else if(ch==='G'){ setCell(i,TILE.SRC_G,0,true); current.sources.push({i,color:C.G}); }
+        else if(ch==='B'){ setCell(i,TILE.SRC_B,0,true); current.sources.push({i,color:C.B}); }
+        else if(ch==='r'){ setCell(i,TILE.TERM_R,0,true); current.targets.push({i,need:C.R}); }
+        else if(ch==='g'){ setCell(i,TILE.TERM_G,0,true); current.targets.push({i,need:C.G}); }
+        else if(ch==='b'){ setCell(i,TILE.TERM_B,0,true); current.targets.push({i,need:C.B}); }
+        else if(ch==='w'){ setCell(i,TILE.TERM_W,0,true); current.targets.push({i,need:C.ALL}); }
+      }
+    }
+
+    UI.levelName.textContent = L.name;
+    UI.targetsAll.textContent = current.targets.length;
+    UI.targetsOk.textContent = "0";
+
+    // best
+    const b = save.best[idx];
+    UI.bestScore.textContent = b ? b.score : "—";
+    UI.bestStars.textContent = b ? "★".repeat(b.stars) : "—";
+
+    // timer
+    current.startTime = now();
+    current.timer && cancelAnimationFrame(current.timer);
+    tickTimer();
+
+    // UI render
+    renderInv();
+    renderUpgrades();
+    renderLevelList();
+    draw();
+  }
+
+  function idxOf(x,y){ return y*current.W+x; }
+  function xyOf(i){ return {x: i%current.W, y: Math.floor(i/current.W)}; }
+  function inBounds(x,y){ return x>=0 && y>=0 && x<current.W && y<current.H; }
+
+  function setCell(i,t,meta=0,lock=false){
+    current.cell[i]=t; current.meta[i]=meta;
+    if(lock) current.locked[i]=true;
+  }
+
+  /*** --- Inventory & Tools ------------------------------------------------ ***/
+  let tool = {id:TILE.STRA, orientation:0, filter:C.R};
+  function renderInv(){
+    const inv = current.inventory, u=save.upgrades;
+    UI.inv.innerHTML = '';
+    const items = [
+      {id:TILE.STRA, label:"Straight", count:inv.STRA},
+      {id:TILE.CORN, label:"Corner", count:inv.CORN},
+      {id:TILE.TJUNC, label:"T-Junction", count:inv.TJUNC},
+      {id:TILE.CROSS, label:"Cross", count:inv.CROSS, locked:(!u.unlock_cross && current.levelIndex<4)}, // unlock from level 5 or upgrade
+      {id:TILE.FILT, label:"Filter", count:inv.FILT},
+      {id:-1, label:"Eraser", count:"∞"}
+    ];
+    for(const it of items){
+      const d=document.createElement('div');
+      d.className='tool'+(tool.id===it.id?' active':'');
+      if(it.locked){ d.style.opacity=.4; d.title="Locked"; d.style.pointerEvents='none'; }
+      d.innerHTML = iconFor(it.id)+'<small>'+it.label+' • <b>'+(it.count??'∞')+'</b></small>';
+      d.onclick=()=>{ tool.id=it.id; highlightTools(); draw(); };
+      UI.inv.appendChild(d);
+    }
+    highlightTools();
+  }
+  function highlightTools(){
+    [...UI.inv.children].forEach((c,i)=>{
+      const id=[TILE.STRA,TILE.CORN,TILE.TJUNC,TILE.CROSS,TILE.FILT,-1][i];
+      c.classList.toggle('active', tool.id===id);
+    });
+  }
+  function iconFor(id,meta=0,filter=C.R){
+    const s = (id===TILE.FILT) ? `<span class="dot ${filter==C.R?'r':filter==C.G?'g':'b'}"></span>` : '';
+    const t = { [TILE.STRA]:'┃━', [TILE.CORN]:'┏┓┗┛', [TILE.TJUNC]:'┳┫┻┣', [TILE.CROSS]:'╋', [TILE.FILT]:'⬤' }[id] || '×';
+    return `<div>${s}<span style="font-family:ui-monospace">${t}</span></div>`;
+  }
+
+  /*** --- Upgrades & Shop -------------------------------------------------- ***/
+  function renderUpgrades(){
+    UI.upgList.innerHTML='';
+    SHOP.forEach(s=>{
+      const owned = !!save.upgrades[s.id];
+      const row=document.createElement('div'); row.className='shop-card';
+      row.innerHTML = `<div><b>${s.name}</b><div class="hint">${s.desc}</div></div>
+                       <div class="row">
+                         <span class="money">₵ ${s.cost}</span>
+                         <button class="btn" ${owned?'disabled':''}>${owned?'Owned':'Buy'}</button>
+                       </div>`;
+      row.querySelector('button').onclick = () => {
+        if(owned) return;
+        if(save.credits>=s.cost){
+          save.credits -= s.cost; save.upgrades[s.id]=true; persist();
+          UI.credits.textContent = save.credits;
+          renderUpgrades(); renderInv(); draw();
+        }
+      };
+      UI.upgList.appendChild(row);
+    });
+    UI.credits.textContent = save.credits;
+  }
+
+  /*** --- Level List ------------------------------------------------------- ***/
+  function renderLevelList(){
+    UI.levels.innerHTML='';
+    LEVELS.forEach((L,i)=>{
+      const locked = i>=save.unlocked;
+      const div=document.createElement('div'); div.className='level'+(locked?' locked':'');
+      const best = save.best[i];
+      div.innerHTML = `<div><b>${String(i+1).padStart(2,'0')}</b> ${L.name}</div>
+                       <div class="row">
+                         <span>${best?('Score '+best.score):''}</span>
+                         <span class="stars">${best?('★'.repeat(best.stars)):' '}</span>
+                         <button class="btn"${locked?' disabled':''}>Play</button>
+                       </div>`;
+      div.querySelector('button').onclick=()=>startLevel(i);
+      UI.levels.appendChild(div);
+    });
+  }
+
+  /*** --- Timer ------------------------------------------------------------ ***/
+  function tickTimer(){
+    UI.time.textContent = formatTime(now()-current.startTime);
+    current.timer = requestAnimationFrame(tickTimer);
+  }
+
+  /*** --- Interaction ------------------------------------------------------ ***/
+  const CELL = { size: 56, pad: 16 }; // draw scale
+  CAN.width = CELL.pad*2 + CELL.size*12;
+  CAN.height = CELL.pad*2 + CELL.size*10;
+
+  let hover = {x:-1,y:-1};
+
+  CAN.addEventListener('mousemove', ev=>{
+    const p = pos(ev); hover=p; draw();
+  });
+  CAN.addEventListener('mouseleave', ()=>{ hover={x:-1,y:-1}; draw(); });
+
+  CAN.addEventListener('contextmenu', ev=>ev.preventDefault());
+  CAN.addEventListener('mousedown', ev=>{
+    const {x,y} = pos(ev);
+    if(!inBounds(x,y)) return;
+    const i = idxOf(x,y);
+    if(ev.button===2){ rotateTool(); draw(); return; }
+    if(current.locked[i]) return;
+    if(tool.id===-1){ // erase
+      const t=current.cell[i];
+      if([TILE.STRA,TILE.CORN,TILE.TJUNC,TILE.CROSS,TILE.FILT].includes(t)){
+        pushUndo();
+        refund(t);
+        setCell(i,TILE.EMPTY,0,false);
+        current.moves++; UI.moves.textContent=current.moves;
+        draw();
+      }
+      return;
+    }
+    // place
+    if(!hasInventory(tool.id)) return;
+    const prev = current.cell[i];
+    if(prev!==TILE.EMPTY && prev!==TILE.FILT){ return; } // allow replace filter -> filter
+    pushUndo();
+    if(prev===TILE.FILT && tool.id!==TILE.FILT){ // replacing filter consumes and refunds
+      refund(TILE.FILT);
+    }
+    consume(tool.id);
+    setCell(i, tool.id, tool.id===TILE.FILT ? tool.filter : tool.orientation, false);
+    current.moves++; UI.moves.textContent=current.moves;
+    draw();
+  });
+
+  window.addEventListener('keydown', e=>{
+    if(e.key==='Delete'){ tool.id=-1; highlightTools(); draw(); }
+    else if(e.key==='e' || e.key==='E'){ cycleTool(1); }
+    else if(e.key==='q' || e.key==='Q'){ cycleTool(-1); }
+    else if(e.key==='f' || e.key==='F'){ if(tool.id===TILE.FILT){ tool.filter = ((tool.filter===C.R)?C.G:(tool.filter===C.G?C.B:C.R)); renderInv(); draw(); } }
+    else if(e.key==='r' || e.key==='R'){ rotateTool(); }
+    else if(e.key==='z' && (e.ctrlKey||e.metaKey)){ undo(); }
+  });
+
+  function rotateTool(){
+    if(tool.id===TILE.FILT || tool.id===-1) return;
+    tool.orientation = (tool.orientation+1)&3;
+  }
+  function cycleTool(d){
+    const ids = [TILE.STRA,TILE.CORN,TILE.TJUNC,TILE.CROSS,TILE.FILT,-1];
+    let k = ids.indexOf(tool.id);
+    for(let n=0;n<ids.length;n++){
+      k=(k+d+ids.length)%ids.length;
+      const id=ids[k];
+      if(id===TILE.CROSS && (!save.upgrades.unlock_cross && current.levelIndex<4)) continue;
+      tool.id=id; break;
+    }
+    highlightTools();
+    draw();
+  }
+
+  function hasInventory(id){
+    if(id===-1) return true;
+    const inv = current.inventory;
+    const key = id===TILE.STRA?'STRA':id===TILE.CORN?'CORN':id===TILE.TJUNC?'TJUNC':id===TILE.CROSS?'CROSS':'FILT';
+    return (inv[key]??0)>0;
+  }
+  function consume(id){
+    if(id===-1) return;
+    const key = id===TILE.STRA?'STRA':id===TILE.CORN?'CORN':id===TILE.TJUNC?'TJUNC':id===TILE.CROSS?'CROSS':'FILT';
+    current.inventory[key]--;
+    renderInv();
+  }
+  function refund(id){
+    const key = id===TILE.STRA?'STRA':id===TILE.CORN?'CORN':id===TILE.TJUNC?'TJUNC':id===TILE.CROSS?'CROSS':'FILT';
+    current.inventory[key]++;
+    renderInv();
+  }
+
+  function pos(ev){
+    const r = CAN.getBoundingClientRect();
+    const sx = (ev.clientX - r.left) * (CAN.width / r.width);
+    const sy = (ev.clientY - r.top) * (CAN.height / r.height);
+    const x = Math.floor((sx - CELL.pad)/CELL.size);
+    const y = Math.floor((sy - CELL.pad)/CELL.size);
+    return {x,y};
+  }
+
+  /*** --- Undo ------------------------------------------------------------- ***/
+  function pushUndo(){
+    const snapshot = {
+      cell: current.cell.slice(),
+      meta: current.meta.slice(),
+      inv: structuredClone(current.inventory),
+      moves: current.moves
+    };
+    current.undo.push(snapshot);
+    if(current.undo.length>current.maxUndo) current.undo.shift();
+  }
+  function undo(){
+    const s = current.undo.pop();
+    if(!s) return;
+    current.cell = s.cell; current.meta = s.meta; current.inventory = s.inv; current.moves = s.moves;
+    UI.moves.textContent=current.moves;
+    renderInv(); draw();
+  }
+
+  /*** --- Flow Simulation -------------------------------------------------- ***/
+  // We compute steady-state colors per cell by union / mask propagation along valid connections.
+  function computeFlow(){
+    const W=current.W,H=current.H;
+    const colorAt = new Array(W*H).fill(0);
+    const openDirs = (i)=> {
+      const t=current.cell[i], o=current.meta[i]&3;
+      if(t===TILE.STRA) return (o%2===0)?[0,2]:[1,3]; // 0: horizontal L<->R; 1: vertical U<->D
+      if(t===TILE.CORN) return [o, (o+1)&3]; // 0: R,D; 1: D,L; 2:L,U; 3:U,R
+      if(t===TILE.TJUNC) return [o,(o+1)&3,(o+3)&3]; // T opens all but one side (the "back")
+      if(t===TILE.CROSS) return [0,1,2,3];
+      if(t===TILE.FILT) return [0,1,2,3]; // pass-through; masking happens by meta
+      if(t===TILE.WALL || t===TILE.EMPTY) return [];
+      // Sources/Terminals also conduct like a node (all sides) to reduce special casing but we avoid mixing weirdness:
+      return [0,1,2,3];
+    };
+    const recip = d=> (d+2)&3;
+
+    // seed with sources
+    const q=[];
+    for(const s of current.sources){
+      colorAt[s.i] |= s.color;
+      q.push(s.i);
+    }
+
+    // BFS/relax until no change
+    while(q.length){
+      const i = q.pop();
+      const dirs = openDirs(i);
+      const c0 = colorAt[i];
+      const maskHere = (current.cell[i]===TILE.FILT)? current.meta[i] : C.ALL;
+      const passColor = c0 & maskHere;
+      for(const d of dirs){
+        const {x,y}=xyOf(i);
+        const nx=x+DIRS[d].x, ny=y+DIRS[d].y;
+        if(!inBounds(nx,ny)) continue;
+        const j=idxOf(nx,ny);
+        // neighbor must accept reciprocal connection
+        const ndirs = openDirs(j);
+        if(!ndirs.includes(recip(d))) continue;
+        // walls block anyway
+        if(current.cell[j]===TILE.WALL) continue;
+        // neighbor filter masks next value
+        const maskNext = (current.cell[j]===TILE.FILT)? current.meta[j] : C.ALL;
+        const nc = passColor & maskNext;
+        if(nc && ((colorAt[j] | nc) !== colorAt[j])){
+          colorAt[j] |= nc; q.push(j);
+        }
+      }
+    }
+
+    // terminals satisfied?
+    let ok=0;
+    for(const t of current.targets){
+      const have = colorAt[t.i];
+      if( (have & t.need) === t.need ) ok++;
+    }
+
+    return {colorAt, ok, total:current.targets.length};
+  }
+
+  /*** --- Drawing ---------------------------------------------------------- ***/
+  function draw(){
+    const W=current.W,H=current.H, S=CELL.size, P=CELL.pad;
+    CAN.width = Math.max(CAN.width, P*2 + S*W);
+    CAN.height = Math.max(CAN.height, P*2 + S*H);
+    CTX.clearRect(0,0,CAN.width,CAN.height);
+
+    const {colorAt, ok, total} = computeFlow();
+    UI.targetsOk.textContent = ok;
+
+    // background grid
+    for(let y=0;y<H;y++){
+      for(let x=0;x<W;x++){
+        const i=idxOf(x,y);
+        const cx=P+x*S, cy=P+y*S;
+        CTX.fillStyle = "#0d142a";
+        CTX.strokeStyle = "#0f203c";
+        CTX.lineWidth = 1;
+        CTX.fillRect(cx,cy,S-1,S-1);
+        CTX.strokeRect(cx+.5,cy+.5,S-1, S-1);
+
+        // dead-end marker if optimizer enabled
+        if(save.upgrades.optimizer){
+          const t=current.cell[i];
+          if([TILE.STRA,TILE.CORN,TILE.TJUNC,TILE.CROSS,TILE.FILT].includes(t)){
+            if(colorAt[i]===0){
+              CTX.fillStyle="rgba(255,0,0,.07)";
+              CTX.fillRect(cx,cy,S-1,S-1);
+            }
+          }
+        }
+      }
+    }
+
+    // draw connections and tiles
+    for(let y=0;y<H;y++){
+      for(let x=0;x<W;x++){
+        const i=idxOf(x,y);
+        const t=current.cell[i], m=current.meta[i]&3;
+        const cx=P+x*S, cy=P+y*S, midx=cx+S/2, midy=cy+S/2;
+        const flux=colorAt[i];
+
+        // Walls
+        if(t===TILE.WALL){
+          CTX.fillStyle="#0a0e1c";
+          CTX.fillRect(cx,cy,S-1,S-1);
+          CTX.strokeStyle="#243451"; CTX.lineWidth=2;
+          CTX.strokeRect(cx+2,cy+2,S-5,S-5);
+          continue;
+        }
+
+        // Connections (underlay)
+        const drawSeg=(x1,y1,x2,y2,col,w=6)=>{
+          CTX.strokeStyle=col; CTX.lineWidth=w; CTX.lineCap="round";
+          CTX.beginPath(); CTX.moveTo(x1,y1); CTX.lineTo(x2,y2); CTX.stroke();
+          // glow
+          CTX.strokeStyle=col+"55"; CTX.lineWidth=w+4; CTX.stroke();
+        };
+
+        const open = (tile, meta) => {
+          if(tile===TILE.STRA) return (meta%2===0)?[0,2]:[1,3];
+          if(tile===TILE.CORN) return [meta,(meta+1)&3];
+          if(tile===TILE.TJUNC) return [meta,(meta+1)&3,(meta+3)&3];
+          if(tile===TILE.CROSS) return [0,1,2,3];
+          if(tile===TILE.FILT) return [0,1,2,3];
+          if(tile===TILE.EMPTY) return [];
+          return [0,1,2,3]; // terminals/sources
+        };
+
+        const dirs=open(t,m);
+        if(dirs.length){
+          // for flux color, composite draw multi-channel
+          const channels=[1,2,4].filter(c=> (flux&c)!==0 );
+          const col=(c)=>COLORS[c];
+          for(const d of dirs){
+            const nx=midx+(d===0?S/2: d===2?-S/2: 0);
+            const ny=midy+(d===1?S/2: d===3?-S/2: 0);
+            // draw faint base conduit
+            drawSeg(midx,midy,nx,ny,"#334a7a",3);
+            // overlay flux
+            for(const ch of channels) drawSeg(midx,midy,nx,ny, col(ch));
+          }
+        }
+
+        // Sources & Terminals
+        if(t===TILE.SRC_R || t===TILE.SRC_G || t===TILE.SRC_B){
+          const c = (t===TILE.SRC_R)?C.R: (t===TILE.SRC_G)?C.G:C.B;
+          fillNode(midx,midy, COLORS[c], "#00000040"); label(x,y, colorMaskToName(c));
+        }
+        if(t===TILE.TERM_R || t===TILE.TERM_G || t===TILE.TERM_B || t===TILE.TERM_W){
+          const need = (t===TILE.TERM_R)?C.R:(t===TILE.TERM_G)?C.G:(t===TILE.TERM_B)?C.B:C.ALL;
+          const got = colorAt[i];
+          const good = ((got & need) === need);
+          const cc = good ? "#2ecc71" : "#ff5d73";
+          strokeNode(midx,midy, cc); label(x,y, (need===C.ALL?'RGB':colorMaskToName(need)));
+        }
+
+        // Filters
+        if(t===TILE.FILT){
+          const f = current.meta[i]; const col=COLORS[f];
+          CTX.fillStyle="#0a1126"; CTX.strokeStyle="#223a70"; CTX.lineWidth=2;
+          CTX.beginPath(); CTX.arc(midx,midy,14,0,Math.PI*2); CTX.fill(); CTX.stroke();
+          CTX.fillStyle=col; CTX.beginPath(); CTX.arc(midx,midy,8,0,Math.PI*2); CTX.fill();
+        }
+
+        // hover preview
+        if(hover.x===x && hover.y===y && !current.locked[i]){
+          CTX.strokeStyle="#ffffff55"; CTX.lineWidth=2; CTX.strokeRect(cx+2,cy+2,S-5,S-5);
+          if(tool.id!==-1){
+            // ghost piece
+            const prev=current.cell[i];
+            if(prev===TILE.EMPTY || (prev===TILE.FILT && tool.id===TILE.FILT)){
+              ghostPiece(midx,midy,tool.id, tool.id===TILE.FILT?tool.filter:tool.orientation);
+            }
+          }
+        }
+      }
+    }
+
+    function label(x,y,text){
+      CTX.fillStyle="#a9b4cb"; CTX.font="12px ui-monospace";
+      CTX.fillText(text, P+x*S+6, P+y*S+14);
+    }
+    function fillNode(x,y,fill,glow){
+      CTX.shadowBlur=10; CTX.shadowColor=fill;
+      CTX.fillStyle=fill; CTX.beginPath(); CTX.arc(x,y,14,0,Math.PI*2); CTX.fill();
+      CTX.shadowBlur=0; CTX.strokeStyle=glow; CTX.lineWidth=2; CTX.stroke();
+    }
+    function strokeNode(x,y,stroke){
+      CTX.strokeStyle=stroke; CTX.lineWidth=3;
+      CTX.beginPath(); CTX.arc(x,y,14,0,Math.PI*2); CTX.stroke();
+    }
+    function ghostPiece(x,y,id,meta){
+      CTX.globalAlpha=0.6;
+      CTX.strokeStyle="#9fb4ff"; CTX.lineWidth=4; CTX.lineCap="round";
+      const arms = (id===TILE.STRA)?((meta%2===0)?[0,2]:[1,3])
+                  :(id===TILE.CORN)?[meta,(meta+1)&3]
+                  :(id===TILE.TJUNC)?[meta,(meta+1)&3,(meta+3)&3]
+                  :(id===TILE.CROSS)?[0,1,2,3]
+                  :[];
+      for(const d of arms){
+        const nx=x+(d===0?CELL.size/2: d===2?-CELL.size/2: 0);
+        const ny=y+(d===1?CELL.size/2: d===3?-CELL.size/2: 0);
+        CTX.beginPath(); CTX.moveTo(x,y); CTX.lineTo(nx,ny); CTX.stroke();
+      }
+      if(id===TILE.FILT){
+        CTX.fillStyle=COLORS[meta]; CTX.beginPath(); CTX.arc(x,y,10,0,Math.PI*2); CTX.fill();
+      }
+      CTX.globalAlpha=1;
+    }
+
+    // win?
+    if(!current.solved && ok===total){
+      current.solved = true;
+      levelComplete();
+    }
+  }
+
+  /*** --- Scoring & Progress ---------------------------------------------- ***/
+  function levelComplete(){
+    const elapsed = Math.floor((now()-current.startTime)/1000); // sec
+    const invLeft = totalInventoryLeft();
+    const base = 500 + current.levelIndex*30;
+    const timeBonus = Math.max(0, 300 - elapsed); // faster is better
+    const score = base + invLeft*20 + timeBonus*2 - current.moves*2;
+    const stars = (score>800?3: score>600?2: 1);
+
+    // credits awarded
+    const credits = 40 + Math.max(0, timeBonus/3 | 0) + invLeft*2;
+    save.credits += credits;
+
+    // best?
+    const idx=current.levelIndex;
+    const best=save.best[idx];
+    if(!best || score>best.score){
+      save.best[idx]={score,stars,time:elapsed,moves:current.moves};
+    }
+
+    // unlock next
+    if(save.unlocked < idx+2) save.unlocked = idx+2;
+
+    persist();
+    UI.credits.textContent=save.credits;
+    UI.bestScore.textContent=save.best[idx].score;
+    UI.bestStars.textContent="★".repeat(save.best[idx].stars);
+    renderLevelList();
+
+    // show banner
+    toast(`Level complete! +₵${credits} • Score ${score} • ${stars}★`);
+  }
+
+  function totalInventoryLeft(){
+    const inv = current.inventory;
+    return (inv.STRA|0)+(inv.CORN|0)+(inv.TJUNC|0)+(inv.CROSS|0)+(inv.FILT|0);
+  }
+
+  function toast(msg){
+    const t=document.createElement('div');
+    t.textContent=msg;
+    Object.assign(t.style,{
+      position:'fixed',left:'50%',top:'16px',transform:'translateX(-50%)',
+      background:'linear-gradient(90deg,var(--accent),var(--accent2))',color:'#0b0f1a',
+      padding:'10px 14px',borderRadius:'12px',boxShadow:'0 6px 16px rgba(0,0,0,.35)',zIndex:9999,fontWeight:'700'
+    });
+    document.body.appendChild(t);
+    setTimeout(()=>{ t.style.transition='opacity .3s ease, transform .3s ease'; t.style.opacity='0'; t.style.transform='translateX(-50%) translateY(-6px)'; }, 1400);
+    setTimeout(()=>t.remove(), 1800);
+  }
+
+  /*** --- UI Buttons ------------------------------------------------------- ***/
+  UI.btnReset.onclick=()=>{
+    startLevel(current.levelIndex);
+    toast('Level reset');
+  };
+  UI.btnUndo.onclick=()=> undo();
+  UI.btnCheck.onclick=()=> draw();
+  UI.btnShop.onclick=()=> { toast('Upgrades apply per level start.'); renderUpgrades(); };
+  UI.btnNew.onclick=()=>{
+    if(confirm('Start a new game? Progress and credits will be reset (scores remain).')){
+      save = defaultSave(); persist(); renderUpgrades(); renderLevelList(); startLevel(0);
+    }
+  };
+  UI.btnMenu.onclick=()=>{ window.scrollTo({top:0,behavior:"smooth"}); };
+
+  /*** --- Init ------------------------------------------------------------- ***/
+  startLevel( Math.min(save.unlocked-1, LEVELS.length-1) );
+
+})();
+</script>
+</body>
+</html>

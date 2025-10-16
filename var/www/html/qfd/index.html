@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>QLD Bushfire Incidents — Local Cache</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+  :root{
+    --bg:#0b0f14; --panel:#0e1520; --b:#1f2a38; --fg:#eef2f7; --muted:#9fb0c3;
+    --lvl-emerg:#d32f2f; --lvl-watch:#f57c00; --lvl-advice:#1976d2; --lvl-unk:#607d8b;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{padding:12px 16px;background:#0d141f;border-bottom:1px solid var(--b)}
+  main{display:grid;grid-template-columns:360px 1fr;gap:12px;padding:12px}
+  #list{max-height:calc(100vh - 80px);overflow:auto;background:var(--panel);border:1px solid var(--b);border-radius:10px;padding:10px}
+  #map{height:calc(100vh - 80px);border:1px solid var(--b);border-radius:10px;background:#0a0a0a}
+  .muted{color:var(--muted);font-size:12px}
+  .card{padding:10px;border-radius:8px;border:1px solid var(--b);margin-bottom:10px;background:#0b111a;cursor:pointer}
+  .badge{display:inline-block;font-size:11px;padding:2px 6px;border-radius:999px;margin-left:6px}
+  .lvl-emerg{background:var(--lvl-emerg);color:white}
+  .lvl-watch{background:var(--lvl-watch);color:black}
+  .lvl-advice{background:var(--lvl-advice);color:white}
+  .lvl-unk{background:var(--lvl-unk);color:white}
+  .legend{position:absolute;right:16px;top:92px;background:rgba(13,20,31,.9);padding:8px 10px;border:1px solid var(--b);border-radius:8px}
+  .legend div{display:flex;align-items:center;gap:8px;margin:4px 0}
+  .swatch{width:14px;height:14px;border-radius:3px;border:1px solid #0003}
+  .srch{display:flex;gap:8px;margin-bottom:10px}
+  .srch input{flex:1;padding:8px;border-radius:8px;border:1px solid var(--b);background:#0b111a;color:var(--fg)}
+</style>
+</head>
+<body>
+<header>
+  <h1 style="margin:0; font-size:18px">QLD Bushfire Incidents (local cache)</h1>
+  <div class="muted">Refresh ~30 min when Pi has internet; still works offline with last-known-good copy.</div>
+</header>
+<main>
+  <section id="list">
+    <div class="srch">
+      <input id="q" placeholder="Filter by place/title/status…" />
+    </div>
+    <div id="meta" class="muted">Loading…</div>
+    <div id="cards"></div>
+  </section>
+  <section id="map"></section>
+</main>
+
+<div class="legend">
+  <div><span class="swatch" style="background:var(--lvl-emerg)"></span> Emergency Warning</div>
+  <div><span class="swatch" style="background:var(--lvl-watch)"></span> Watch and Act</div>
+  <div><span class="swatch" style="background:var(--lvl-advice)"></span> Advice</div>
+  <div><span class="swatch" style="background:var(--lvl-unk)"></span> Unknown</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const META = document.getElementById('meta');
+const CARDS = document.getElementById('cards');
+const QUERY = document.getElementById('q');
+
+const map = L.map('map', { zoomControl:true, attributionControl:false }).setView([-22.5, 145], 5);
+
+// Try to load tiles; if offline, map still shows geometry.
+const tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  { maxZoom: 18, detectRetina: true });
+tiles.on('tileerror', () => {/* offline is fine */});
+tiles.addTo(map);
+
+const lvlColor = (lvl) => {
+  if (!lvl) return 'var(--lvl-unk)';
+  const s = (''+lvl).toLowerCase();
+  if (s.includes('emergency')) return 'var(--lvl-emerg)';
+  if (s.includes('watch') || s.includes('act')) return 'var(--lvl-watch)';
+  if (s.includes('advice')) return 'var(--lvl-advice)';
+  return 'var(--lvl-unk)';
+};
+
+let geoLayer = null;
+let features = [];
+let idxToLayer = new Map();
+
+function featureText(p) {
+  const title = p.WarningTitle || p.Header || p.CallToAction || 'Warning';
+  const area  = p.WarningArea || p.location || '';
+  const lvl   = p.WarningLevel || p.WarningType_Level || 'Unknown';
+  const upd   = p.PublishDateLocal_ISO || p.ItemDateTimeLocal_ISO || p.ItemDateTimeUTM || '';
+  return { title, area, lvl, upd };
+}
+
+function popupHtml(p) {
+  const { title, area, lvl, upd } = featureText(p);
+  const badgeClass = lvl.includes('Emergency') ? 'lvl-emerg' :
+                     (lvl.includes('Watch') || lvl.includes('Act')) ? 'lvl-watch' :
+                     lvl.includes('Advice') ? 'lvl-advice' : 'lvl-unk';
+  const header = p.Header ? `<div style="margin-top:6px">${p.Header.replace(/\r?\n/g,'<br/>')}</div>` : '';
+  return `
+    <div style="min-width:240px">
+      <strong>${title}</strong>
+      <span class="badge ${badgeClass}">${lvl}</span>
+      ${area ? `<div class="muted" style="margin-top:4px">${area}</div>` : ''}
+      ${upd ? `<div class="muted" style="margin-top:4px">Updated: ${upd}</div>` : ''}
+      ${header}
+    </div>
+  `;
+}
+
+function cardHtml(p, idx) {
+  const { title, area, lvl, upd } = featureText(p);
+  const badgeClass = lvl.includes('Emergency') ? 'lvl-emerg' :
+                     (lvl.includes('Watch') || lvl.includes('Act')) ? 'lvl-watch' :
+                     lvl.includes('Advice') ? 'lvl-advice' : 'lvl-unk';
+  return `
+    <div class="card" data-idx="${idx}">
+      <div><strong>${title}</strong> <span class="badge ${badgeClass}">${lvl}</span></div>
+      ${area ? `<div class="muted">${area}</div>` : ''}
+      ${upd ? `<div class="muted">Updated: ${upd}</div>` : ''}
+    </div>
+  `;
+}
+
+function makeLayer(data) {
+  if (geoLayer) { geoLayer.remove(); geoLayer = null; }
+  idxToLayer.clear();
+  let runningIdx = -1;
+  geoLayer = L.geoJSON(data, {
+    style: (f) => {
+      const c = lvlColor(f.properties?.WarningLevel || f.properties?.WarningType_Level);
+      return { color: c, weight: 2, fillColor: c, fillOpacity: 0.15 };
+    },
+    pointToLayer: (f, latlng) => {
+      const c = lvlColor(f.properties?.WarningLevel || f.properties?.WarningType_Level);
+      return L.circleMarker(latlng, { radius: 6, color: c, weight: 2, fillColor: c, fillOpacity: 0.8 });
+    },
+    onEachFeature: (f, layer) => {
+      runningIdx += 1;
+      layer.bindPopup(popupHtml(f.properties||{}));
+      idxToLayer.set(runningIdx, layer);
+    }
+  }).addTo(map);
+
+  // Fit bounds if we have any geometry
+  try {
+    const b = geoLayer.getBounds();
+    if (b.isValid()) map.fitBounds(b.pad(0.1));
+  } catch (_){}
+}
+
+function renderList(items) {
+  CARDS.innerHTML = items.map((f, idx) => cardHtml(f.properties||{}, idx)).join('');
+  // focus on map when a card is clicked
+  CARDS.querySelectorAll('.card').forEach((el) => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.getAttribute('data-idx'), 10);
+      const layer = idxToLayer.get(idx);
+      if (layer) {
+        try {
+          const b = layer.getBounds?.();
+          if (b && b.isValid()) { map.fitBounds(b.pad(0.2)); }
+          else if (layer.getLatLng) { map.setView(layer.getLatLng(), 12); }
+          layer.openPopup();
+        } catch (_){}
+      }
+    });
+  });
+}
+
+function applyFilter() {
+  const q = (QUERY.value||'').trim().toLowerCase();
+  if (!q) {
+    makeLayer({ type: "FeatureCollection", features });
+    renderList(features);
+    return;
+    }
+  const filtered = [];
+  for (let i=0;i<features.length;i++) {
+    const f = features[i];
+    const p = f.properties || {};
+    const { title, area, lvl } = featureText(p);
+    const hay = [title, area, lvl].join(" ").toLowerCase();
+    if (hay.includes(q)) filtered.push(f);
+  }
+  makeLayer({ type: "FeatureCollection", features: filtered });
+  renderList(filtered);
+}
+
+async function load() {
+  const status = await fetch('status.json').then(r => r.ok ? r.json() : null).catch(()=>null);
+  META.textContent = status ? `Last fetch (UTC): ${status.fetched_at_utc} — ${status.note}` : 'No status yet.';
+
+  const resp = await fetch('qfd_incidents.json');
+  const data = await resp.json();
+
+  if (!data || !Array.isArray(data.features)) {
+    CARDS.innerHTML = '<div class="muted">No features found.</div>';
+    return;
+  }
+  features = data.features;
+  makeLayer(data);
+  renderList(features);
+}
+
+QUERY.addEventListener('input', () => applyFilter());
+load();
+</script>
+</body>
+</html>

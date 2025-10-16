@@ -1,0 +1,1049 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>CrossBuilder — Offline Crossword Generator</title>
+<style>
+  :root{
+    --bg:#0b0f1a; --panel:#0f1526; --card:#131b33; --edge:#1e2a4a;
+    --ink:#e6e9ef; --muted:#a9b2c3; --accent:#7dd3fc; --accent2:#a78bfa;
+    --ok:#10b981; --warn:#f59e0b; --bad:#ef4444; --ring:rgba(125,211,252,.5);
+    --cell:#0d1325; --cell-hi:#1b2544; --cell-cur:#1f2b52; --cell-bad:#3a1e2a;
+    --block:#0a0e1b; --link:#93c5fd;
+    --font: 15px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  }
+  /* Themes (switchable) */
+  .theme-sand{ --bg:#f7f3eb; --panel:#fff; --card:#fff9ef; --edge:#e8dcc2; --ink:#1a1c22; --muted:#5a616e; --accent:#3b82f6; --accent2:#8b5cf6; --cell:#fff; --cell-hi:#f4efe4; --cell-cur:#ede4d3; --block:#e8dcc2; --link:#1d4ed8; }
+  .theme-ocean{ --bg:#041418; --panel:#071b22; --card:#0a2630; --edge:#0f3a47; --ink:#e8fbff; --muted:#99b5bf; --accent:#22d3ee; --accent2:#34d399; --cell:#082129; --cell-hi:#0d2e39; --cell-cur:#123846; --block:#06161a; --link:#67e8f9; }
+  .theme-terminal{ --bg:#0a0f0a; --panel:#0d140d; --card:#0f170f; --edge:#1a2a1a; --ink:#d1ffd1; --muted:#9ce29c; --accent:#00ff66; --accent2:#00ffaa; --cell:#0b140b; --cell-hi:#112011; --cell-cur:#142814; --block:#081008; --link:#00ffaa; }
+
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:radial-gradient(1200px 600px at -10% -10%, rgba(125,211,252,.09), transparent 60%), radial-gradient(900px 900px at 120% 10%, rgba(167,139,250,.08), transparent 60%), var(--bg); color:var(--ink); font:var(--font);}
+  header{display:flex; gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--edge); background:linear-gradient(to bottom, var(--panel), transparent); position:sticky; top:0; z-index:5}
+  header h1{margin:0; font-size:18px; letter-spacing:.3px}
+  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+  select,button,input[type="file"]::file-selector-button{background:var(--card); color:var(--ink); border:1px solid var(--edge); border-radius:10px; padding:8px 10px; outline:none}
+  button{cursor:pointer}
+  button:hover, select:hover{box-shadow:0 0 0 3px var(--ring)}
+  .pill{padding:6px 10px; border-radius:999px; background:var(--card); border:1px dashed var(--edge); color:var(--muted)}
+  .grow{flex:1}
+  main{display:grid; grid-template-columns: 1fr 320px; gap:14px; padding:14px; max-width:1400px; margin:0 auto}
+  @media (max-width:1000px){ main{grid-template-columns:1fr} }
+  .board-wrap{background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:12px}
+  .board{display:grid; gap:2px; background:var(--edge); border:1px solid var(--edge); user-select:none; touch-action:manipulation}
+  .cell{width:32px; height:32px; display:grid; place-items:center; background:var(--cell); color:var(--ink); font-weight:600; position:relative}
+  .cell .n{position:absolute; left:2px; top:1px; font-size:9px; color:var(--muted)}
+  .cell.block{background:var(--block)}
+  .cell.sel{outline:2px solid var(--accent)}
+  .cell.hi{background:var(--cell-hi)}
+  .cell.cur{background:var(--cell-cur)}
+  .cell.bad{background:var(--cell-bad)}
+  .side{display:flex; flex-direction:column; gap:12px}
+  .panel{background:var(--card); border:1px solid var(--edge); border-radius:14px; padding:12px}
+  .clues{display:grid; grid-template-columns:1fr; gap:8px; max-height:55vh; overflow:auto}
+  .clues h3{margin:4px 0 6px 0; font-size:13px; color:var(--muted)}
+  .clues .clue{padding:6px 8px; border-radius:10px; border:1px solid var(--edge); cursor:pointer}
+  .clues .clue:hover{box-shadow:0 0 0 3px var(--ring)}
+  .clues .clue.sel{outline:2px solid var(--accent)}
+  .stats .k{color:var(--muted)}
+  .muted{color:var(--muted)}
+  .help{max-width:960px; margin:0 auto; padding:16px}
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50}
+  .modal .inner{max-width:960px; background:var(--panel); border:1px solid var(--edge); border-radius:16px; padding:18px; box-shadow:0 30px 60px rgba(0,0,0,.5)}
+  .link{color:var(--link); text-decoration:underline; cursor:pointer}
+  .tag{font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--edge); background:var(--panel); color:var(--muted)}
+  .flex{display:flex; gap:8px; align-items:center}
+  .space{flex:1}
+  .hr{height:1px; background:var(--edge); margin:10px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧩 CrossBuilder</h1>
+  <div class="row">
+    <label class="muted">Level
+      <select id="level">
+        <option value="easy">Easy (11×11)</option>
+        <option value="medium" selected>Medium (13×13)</option>
+        <option value="hard">Hard (15×15)</option>
+      </select>
+    </label>
+    <label class="muted">Theme
+      <select id="theme">
+        <option value="default">Midnight</option>
+        <option value="sand">Sand</option>
+        <option value="ocean">Ocean</option>
+        <option value="terminal">Terminal</option>
+      </select>
+    </label>
+    <!-- Word Set dropdown removed -->
+    <button id="new">New Puzzle</button>
+    <button id="regen" title="Try a different layout with same settings">Shuffle Layout</button>
+    <button id="check">Check</button>
+    <button id="reveal">Reveal Letter (1 🔮)</button>
+    <button id="revealWord" disabled>Reveal Word (Unlocked)</button>
+    <span class="pill" id="timer">⏱ 00:00</span>
+    <span class="pill" id="xp">LVL 1 · 0/100 XP · 🔮0</span>
+    <span class="space"></span>
+    <span class="link" id="helpBtn">Help</span>
+  </div>
+</header>
+
+<main>
+  <div class="board-wrap">
+    <div id="board" class="board" aria-label="Crossword grid"></div>
+  </div>
+  <aside class="side">
+    <div class="panel">
+      <div class="flex">
+        <strong>Clues</strong>
+        <span class="space"></span>
+        <span class="tag" id="seedTag">seed: —</span>
+      </div>
+      <div class="hr"></div>
+      <div class="clues" id="clues"></div>
+    </div>
+    <div class="panel">
+      <div class="flex"><strong>Profile</strong><span class="space"></span><button id="resetProg" title="Reset XP/Unlocks only">Reset</button></div>
+      <div class="stats" id="stats">
+        <div><span class="k">Puzzles solved:</span> <span id="pSolved">0</span></div>
+        <div><span class="k">Best time:</span> <span id="best">—</span></div>
+        <div><span class="k">Accuracy (last):</span> <span id="acc">—</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="flex">
+        <strong>Load Wordlist</strong>
+        <span class="space"></span>
+        <button id="exportBtn" title="Export current placed puzzle + clues">Export Puzzle</button>
+      </div>
+      <div class="hr"></div>
+      <input id="file" type="file" accept=".json,.csv"/>
+      <div class="muted" style="margin-top:6px">
+        JSON schema: <code>{"title":"...", "entries":[{"answer":"KANGAROO","clue":"..."}]}</code><br/>
+        CSV: <code>ANSWER,clue text</code> (header optional). Answers A-Z only.
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- Help Modal -->
+<div id="help" class="modal" role="dialog" aria-modal="true">
+  <div class="inner">
+    <div class="flex">
+      <strong>How to play & use CrossBuilder</strong>
+      <span class="space"></span>
+      <button id="closeHelp">Close</button>
+    </div>
+    <div class="hr"></div>
+    <div class="help">
+      <p><b>Goal:</b> Fill the grid so every Across/Down clue is satisfied. Click a cell to select; type letters A–Z. Use arrow keys to move. Press <b>Space</b> to toggle direction. <b>Backspace</b> deletes & moves back.</p>
+      <ul>
+        <li><b>New Puzzle</b>: Generates a fresh grid from the selected <i>Level</i> (size) and <i>Theme</i>. The word bank is a unified pool (built-ins + local lists).</li>
+        <li><b>Shuffle Layout</b>: Same settings, different seed/placement.</li>
+        <li><b>Check</b>: Highlights incorrect letters.</li>
+        <li><b>Reveal Letter</b>: Spends a 🔮 to reveal a letter in the current word. Earn 🔮 by solving puzzles and maintaining streaks.</li>
+        <li><b>Reveal Word</b>: Unlocks at Level 3 (or 500 XP). Reveals the entire selected word (costs 3 🔮).</li>
+        <li><b>Timer</b>: Runs during a puzzle; faster finishes = more XP. Progress and bests are saved locally.</li>
+      </ul>
+      <p><b>Loading wordlists (offline):</b> Drop in JSON or CSV; they’ll be folded into the unified pool automatically.</p>
+      <pre style="white-space:pre-wrap;background:var(--card);border:1px solid var(--edge);padding:10px;border-radius:10px">
+JSON example:
+{
+  "title": "Australian Wildlife (Easy)",
+  "entries": [
+    {"answer":"EMU","clue":"Tall flightless bird of Australia"},
+    {"answer":"KOALA","clue":"Leaf-munching marsupial"}
+  ]
+}
+
+CSV example (HEADER OPTIONAL):
+answer,clue
+EMU,Tall flightless bird of Australia
+KOALA,Leaf-munching marsupial
+      </pre>
+      <p><b>Design notes:</b> Generator places words by maximizing intersections and tries several layouts, picking the best. Difficulty scales grid size, hint budget, and scoring. All data lives in your browser—no internet or server.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===========================
+   CrossBuilder — Single-file Crossword Generator
+   =========================== */
+
+/* ---------- Utilities ---------- */
+const rnd = (n)=>Math.floor(Math.random()*n);
+const choice = (arr)=>arr[rnd(arr.length)];
+const clamp = (v,a,b)=>Math.min(b,Math.max(a,v));
+const pad = (n)=>String(n).padStart(2,'0');
+const shuffle = (a)=>{ for(let i=a.length-1;i>0;i--){ const j=rnd(i+1); [a[i],a[j]]=[a[j],a[i]] } return a };
+const deepCopy = (o)=>JSON.parse(JSON.stringify(o));
+const now = ()=>Date.now();
+
+/* ---------- Profile / Progression ---------- */
+const PROFILE_KEY = "crossbuilder:v1:profile";
+const defaultProfile = { xp:0, lvl:1, solved:0, bestMs:null, lastAcc:null, orbs:0 };
+function loadProfile() {
+  try{ return Object.assign({}, defaultProfile, JSON.parse(localStorage.getItem(PROFILE_KEY)||"{}")); }
+  catch{ return deepCopy(defaultProfile); }
+}
+function saveProfile(p){ localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); }
+function lvlForXP(xp){
+  if (xp >= 2000) return 8;
+  if (xp >= 1200) return 7;
+  if (xp >= 800) return 6;
+  if (xp >= 500) return 5;
+  if (xp >= 300) return 4;
+  if (xp >= 180) return 3;
+  if (xp >= 100) return 2;
+  return 1;
+}
+function nextLvlXP(lvl){
+  const table={1:100,2:180,3:300,4:500,5:800,6:1200,7:2000,8:Infinity};
+  return table[lvl] ?? 999999;
+}
+
+/* ---------- Built-in Word Sets ---------- */
+const BUILT_SETS = [
+  {
+    title:"General Knowledge (Medium)",
+    entries:[
+      {answer:"ATLAS", clue:"Book of maps"},
+      {answer:"TELESCOPE", clue:"Instrument for viewing distant objects"},
+      {answer:"ALGORITHM", clue:"Step-by-step procedure for solving a class of problems"},
+      {answer:"ORBIT", clue:"Path of a body around a star or planet"},
+      {answer:"QUASAR", clue:"Extremely luminous galactic nucleus"},
+      {answer:"ISOTOPE", clue:"Atoms of the same element with different neutron counts"},
+      {answer:"ARCHIPELAGO", clue:"Group of islands"},
+      {answer:"NECTAR", clue:"Sugary fluid sought by pollinators"},
+      {answer:"MNEMONIC", clue:"Memory aid"},
+      {answer:"CYTOPLASM", clue:"Gel-like cell interior"},
+      {answer:"GONDOLA", clue:"Venetian boat"},
+      {answer:"PANGOLIN", clue:"Scaled mammal that eats ants"},
+      {answer:"EPHEMERAL", clue:"Lasting for a very short time"},
+      {answer:"LABYRINTH", clue:"Maze-like structure"},
+      {answer:"ULTRAVIOLET", clue:"Beyond the visible violet spectrum"},
+      {answer:"ENTROPY", clue:"Measure of disorder"},
+      {answer:"CATALYST", clue:"Speeds a reaction without being consumed"},
+      {answer:"FERMENT", clue:"Convert sugars by yeast"},
+      {answer:"TOPAZ", clue:"Golden gemstone"},
+      {answer:"AZURE", clue:"Bright blue"},
+      {answer:"KILOBYTE", clue:"Roughly 1024 bytes"},
+      {answer:"ZEPHYR", clue:"Gentle breeze"},
+      {answer:"VECTOR", clue:"Quantity with magnitude and direction"},
+      {answer:"TUNDRA", clue:"Treeless biome in the Arctic"},
+      {answer:"GESSO", clue:"Primer used in painting"},
+      {answer:"QUORUM", clue:"Minimum attendees for valid meeting"},
+      {answer:"SYNTAX", clue:"Rules governing sentence structure"},
+      {answer:"CACHE", clue:"Hidden supply or fast memory"},
+      {answer:"IONIC", clue:"Bond involving electron transfer"},
+      {answer:"HELIX", clue:"Spiral shape"}
+    ]
+  },
+  {
+    title:"Technology & Coding (Hard)",
+    entries:[
+      {answer:"VARIABLE", clue:"Storage slot for a value in code"},
+      {answer:"RECURSION", clue:"Function calling itself"},
+      {answer:"MUTABLE", clue:"Changeable after creation"},
+      {answer:"IMMUTABLE", clue:"Unchangeable after creation"},
+      {answer:"WEBASSEMBLY", clue:"Binary instruction format for the web"},
+      {answer:"JAVASCRIPT", clue:"Language that runs in browsers"},
+      {answer:"PYTORCH", clue:"Deep learning library with dynamic graphs"},
+      {answer:"CONTAINER", clue:"Lightweight, isolated OS-level environment"},
+      {answer:"REGEX", clue:"Pattern for matching text"},
+      {answer:"COMPILE", clue:"Translate source into machine code"},
+      {answer:"LATENCY", clue:"Delay between cause and effect"},
+      {answer:"BANDWIDTH", clue:"Data transfer capacity"},
+      {answer:"SANDBOX", clue:"Restricted environment for testing"},
+      {answer:"ENDPOINT", clue:"API URL target"},
+      {answer:"PIPELINE", clue:"Series of processing stages"},
+      {answer:"BITWISE", clue:"Operations at the level of individual bits"},
+      {answer:"MONOREPO", clue:"Single repository housing many projects"},
+      {answer:"SCHEMA", clue:"Formal description of data organization"},
+      {answer:"CHECKSUM", clue:"Digest for data integrity"},
+      {answer:"ENCRYPT", clue:"Scramble data to protect it"},
+      {answer:"HYPERLINK", clue:"Clickable reference on the web"},
+      {answer:"LOADBALANCER", clue:"Distributes network traffic"},
+      {answer:"MICROSERVICE", clue:"Small independently deployable service"},
+      {answer:"INDEX", clue:"Database structure that speeds queries"},
+      {answer:"CACHELINE", clue:"Basic unit of CPU cache fill"},
+      {answer:"TRANSPILER", clue:"Converts code from one language to another"},
+      {answer:"PROMETHEUS", clue:"Popular metrics/time-series tool"},
+      {answer:"IDEMPOTENT", clue:"Operation that can be repeated without side effects"},
+      {answer:"PARALLELISM", clue:"Performing multiple tasks simultaneously"},
+      {answer:"THROTTLING", clue:"Intentional rate limiting"}
+    ]
+  },
+  {
+    title:"Australia & Bushcraft (Easy)",
+    entries:[
+      {answer:"KANGAROO", clue:"Hopping marsupial often seen at dusk"},
+      {answer:"EMU", clue:"Fast-running bird that can’t fly"},
+      {answer:"KOALA", clue:"Eucalyptus connoisseur"},
+      {answer:"WOMBAT", clue:"Marsupial engineer with cube poo"},
+      {answer:"LAMINGTON", clue:"Sponge cake with chocolate and coconut"},
+      {answer:"BOOMERANG", clue:"Curved throwing tool"},
+      {answer:"BILLABONG", clue:"Ox-bow lake or waterhole"},
+      {answer:"TINNIES", clue:"Colloquial for small aluminum boats"},
+      {answer:"SNAKEBITE", clue:"Risk when hiking long grass"},
+      {answer:"TRACK", clue:"Aussie for unsealed road"},
+      {answer:"SWAG", clue:"A roll-up canvas bed"},
+      {answer:"LARRIKIN", clue:"Mischievous spirited person"},
+      {answer:"BUSHFIRE", clue:"Hot, fast, and needs a plan"},
+      {answer:"LAMINEX", clue:"Common brand for benchtops"},
+      {answer:"EUCALYPT", clue:"Iconic genus of trees with oil"},
+      {answer:"DINGO", clue:"Wild dog of Australia"},
+      {answer:"SANDPAPERFIG", clue:"Bush tucker fruit with rough leaves"},
+      {answer:"PAPERBARK", clue:"Tree with peely, papery bark"},
+      {answer:"DAM", clue:"Farm water store"},
+      {answer:"STUBBIES", clue:"Short shorts or beer bottles"},
+      {answer:"TINSELFISH", clue:"Shiny baitfish, common off beaches"},
+      {answer:"TAIPAN", clue:"Highly venomous snake"},
+      {answer:"NULLARBOR", clue:"Vast treeless plain"},
+      {answer:"JACARANDA", clue:"Purple-blooming street tree"},
+      {answer:"BROLGA", clue:"Dancing crane"},
+      {answer:"WATTLE", clue:"Golden national floral emblem"},
+      {answer:"OPAL", clue:"Iridescent gemstone"},
+      {answer:"WATTLESEED", clue:"Nutrient-rich native food"},
+      {answer:"GOANNA", clue:"Large monitor lizard"},
+      {answer:"GUMBOOT", clue:"Rubber footwear for mud"}
+    ]
+  }
+];
+
+/* ---------- Unified Pool ---------- */
+let MASTER_POOL = [];   // unified word bank
+let profile = loadProfile();
+
+/* ---------- DOM ---------- */
+const boardEl = document.getElementById('board');
+const cluesEl = document.getElementById('clues');
+const seedTag = document.getElementById('seedTag');
+const timerEl = document.getElementById('timer');
+const xpEl = document.getElementById('xp');
+const pSolvedEl = document.getElementById('pSolved');
+const bestEl = document.getElementById('best');
+const accEl = document.getElementById('acc');
+
+const levelSel = document.getElementById('level');
+const themeSel = document.getElementById('theme');
+const newBtn = document.getElementById('new');
+const regenBtn = document.getElementById('regen');
+const checkBtn = document.getElementById('check');
+const revealBtn = document.getElementById('reveal');
+const revealWordBtn = document.getElementById('revealWord');
+const resetProgBtn = document.getElementById('resetProg');
+const fileInput = document.getElementById('file');
+const exportBtn = document.getElementById('exportBtn');
+
+const helpBtn = document.getElementById('helpBtn');
+const help = document.getElementById('help');
+const closeHelp = document.getElementById('closeHelp');
+
+helpBtn.onclick=()=>help.style.display='flex';
+closeHelp.onclick=()=>help.style.display='none';
+help.addEventListener('click', (e)=>{ if(e.target===help) help.style.display='none'; });
+
+/* ---------- Theming ---------- */
+function applyTheme() {
+  const b = document.body;
+  b.classList.remove('theme-sand','theme-ocean','theme-terminal');
+  const v = themeSel.value;
+  if (v==='sand') b.classList.add('theme-sand');
+  else if (v==='ocean') b.classList.add('theme-ocean');
+  else if (v==='terminal') b.classList.add('theme-terminal');
+}
+themeSel.addEventListener('change', applyTheme);
+applyTheme();
+
+/* ---------- Generator Core ---------- */
+function lettersOnly(s){ return (s||'').toUpperCase().replace(/[^A-Z]/g,''); }
+
+/* Drop abbreviation-y clues/answers (heuristics) */
+function clueLooksLikeAbbrev(clue){
+  if(!clue) return true;
+  const s = String(clue).trim();
+  if (/\b(abbr\.?|abbrev\.?|abbreviation|initialism|acronym|for\s+short|init\.?)\b/i.test(s)) return true;
+  if (/(^|\s)([A-Za-z]\.){2,}(\s|$)/.test(s)) return true;
+  if ((s.match(/\b[A-Za-z]{2,}\.\b/g)||[]).length >= 1) return true;
+  if ((s.match(/\b[A-Z]{2,4}\b/g)||[]).length >= 2) return true;
+  if (s.length < 3 || /^[^A-Za-z]+$/.test(s)) return true;
+  return false;
+}
+function answerLooksLikeAbbrev(ans, raw){
+  const rawStr = String(raw||"");
+  if (/[.\-_/\\\s0-9]/.test(rawStr)) return true;
+  if (!/^[A-Z]+$/.test(ans)) return true;
+  if (ans.length <= 2) return true;
+  if (ans.length <= 5 && !/[AEIOUY]/.test(ans)) return true;
+  if (ans.length <= 4 && (ans.match(/[QXZJ]/g)||[]).length >= 2) return true;
+  const COMMON = new Set([
+    "USA","UAE","UK","EU","UN","NATO","FBI","CIA","IRS",
+    "CPU","GPU","API","SDK","RAM","ROM","SQL","HTML","CSS","JS","JSON","XML",
+    "URL","DNS","IP","PDF","ETA","AKA","FYI","DIY","TLDR"
+  ]);
+  if (COMMON.has(ans)) return true;
+  return false;
+}
+function sanitizeEntries(entries){
+  const out=[]; const seen=new Set();
+  for(const e of entries){
+    const raw = e?.answer ?? "";
+    const ans = lettersOnly(raw);
+    if(!ans || ans.length < 3) continue;
+    const clue = String(e?.clue ?? "").trim();
+    if (answerLooksLikeAbbrev(ans, raw)) continue;
+    if (clueLooksLikeAbbrev(clue)) continue;
+    const key = ans + "|" + clue.toLowerCase();
+    if(seen.has(key)) continue;
+    seen.add(key);
+    out.push({answer:ans, clue: clue || ans});
+  }
+  return out;
+}
+
+/* Unified selection */
+function selectedEntries(){
+  // Shuffle and take a working subset for speed; generator tries to place as many as possible.
+  return shuffle(MASTER_POOL).slice(0, 200);
+}
+
+function sizeForLevel(lvl){
+  if(lvl==='easy') return 11;
+  if(lvl==='hard') return 15;
+  return 13;
+}
+
+/* Grid helpers */
+function emptyGrid(N){ return Array.from({length:N},()=>Array.from({length:N},()=>({ch:null, block:false, n:null, user:''}))); }
+function canPlace(grid, word, r, c, dir){
+  const N=grid.length, L=word.length;
+  if(dir==='across'){
+    if(c+L> N) return false;
+    if(c>0 && grid[r][c-1].ch) return false;
+    if(c+L < N && grid[r][c+L].ch) return false;
+    let crosses=0;
+    for(let i=0;i<L;i++){
+      const cell = grid[r][c+i];
+      if(cell.block) return false;
+      if(cell.ch && cell.ch!==word[i]) return false;
+      if(cell.ch===word[i]) crosses++;
+    }
+    return (crosses>0) || isGridEmpty(grid);
+  }else{
+    if(r+L> N) return false;
+    if(r>0 && grid[r-1][c].ch) return false;
+    if(r+L < N && grid[r+L][c].ch) return false;
+    let crosses=0;
+    for(let i=0;i<L;i++){
+      const cell = grid[r+i][c];
+      if(cell.block) return false;
+      if(cell.ch && cell.ch!==word[i]) return false;
+      if(cell.ch===word[i]) crosses++;
+    }
+    return (crosses>0) || isGridEmpty(grid);
+  }
+}
+function isGridEmpty(g){
+  for(let r=0;r<g.length;r++) for(let c=0;c<g.length;c++) if(g[r][c].ch) return false;
+  return true;
+}
+function placeWord(grid, word, r, c, dir){
+  const L=word.length;
+  if(dir==='across'){ for(let i=0;i<L;i++){ grid[r][c+i].ch = word[i]; } }
+  else{ for(let i=0;i<L;i++){ grid[r+i][c].ch = word[i]; } }
+}
+function bestPlacement(grid, word){
+  const N=grid.length, L=word.length;
+  let best=null, bestScore=-1;
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      if(canPlace(grid, word, r, c, 'across')){
+        let score=0;
+        for(let i=0;i<L;i++) if(grid[r][c+i].ch===word[i]) score+=2;
+        score += Math.random()*0.5;
+        if(score>bestScore){ bestScore=score; best={r,c,dir:'across'}; }
+      }
+      if(canPlace(grid, word, r, c, 'down')){
+        let score=0;
+        for(let i=0;i<L;i++) if(grid[r+i][c].ch===word[i]) score+=2;
+        score += Math.random()*0.5;
+        if(score>bestScore){ bestScore=score; best={r,c,dir:'down'}; }
+      }
+    }
+  }
+  return best;
+}
+function finalizeBlocks(grid){
+  const N=grid.length;
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      const cell=grid[r][c];
+      if(!cell.ch) cell.block=true;
+    }
+  }
+  let num=1;
+  const across=[], down=[];
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      const cell=grid[r][c];
+      if(cell.block) continue;
+      const startAcross = (!cell.block && (c===0 || grid[r][c-1].block) && (c+1<N && !grid[r][c+1].block));
+      const startDown   = (!cell.block && (r===0 || grid[r-1][c].block) && (r+1<N && !grid[r+1][c].block));
+      if(startAcross || startDown){ cell.n = num++; }
+      if(startAcross){
+        let cc=c, str=""; const coords=[];
+        while(cc<N && !grid[r][cc].block){ str+=grid[r][cc].ch; coords.push([r,cc]); cc++; }
+        across.push({n:cell.n, answer:str, coords});
+      }
+      if(startDown){
+        let rr=r, str=""; const coords=[];
+        while(rr<N && !grid[rr][c].block){ str+=grid[rr][c].ch; coords.push([rr,c]); rr++; }
+        down.push({n:cell.n, answer:str, coords});
+      }
+    }
+  }
+  return {across, down};
+}
+function tryGenerate(entries, N, attempts=24){
+  const pool = sanitizeEntries(entries);
+  pool.sort((a,b)=>b.answer.length - a.answer.length || (Math.random()-.5));
+  let bestState=null, bestScore=-1, bestGrid=null;
+  for(let att=0; att<attempts; att++){
+    const grid = emptyGrid(N);
+    const words = shuffle(pool.slice());
+    for(const {answer} of words){
+      if(answer.length > N) continue;
+      const spot = bestPlacement(grid, answer);
+      if(!spot) continue;
+      placeWord(grid, answer, spot.r, spot.c, spot.dir);
+    }
+    const state = finalizeBlocks(grid);
+    const usedAnswers = new Set([...state.across, ...state.down].map(x=>x.answer));
+    const usedCount = usedAnswers.size;
+    const intersections = scoreIntersections(grid);
+    const score = usedCount*10 + intersections*3 - att*0.01;
+    if(score>bestScore){ bestScore=score; bestState=state; bestGrid=grid; }
+  }
+  return { grid:bestGrid, state:bestState, score:bestScore };
+}
+function scoreIntersections(grid){
+  const N=grid.length; let k=0;
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const cell=grid[r][c]; if(cell.block || !cell.ch) continue;
+    const horiz = (c>0 && !grid[r][c-1].block) || (c+1<N && !grid[r][c+1].block);
+    const vert  = (r>0 && !grid[r-1][c].block) || (r+1<N && !grid[r+1][c].block);
+    if(horiz && vert) k++;
+  }
+  return k;
+}
+
+/* ---------- Puzzle Session State ---------- */
+let current = {
+  grid:null, across:[], down:[],
+  N:13, seed: 0, startedAt: 0, tickInt: null,
+  dir: 'across', cur:[0,0],
+  mapClueFromCoord: new Map(),
+  mapClueToIndex: new Map(),
+  revealCost:1, revealWordCost:3,
+  baseHints: {easy:2, medium:1, hard:0}
+};
+
+function updateProfileUI(){
+  profile.lvl = lvlForXP(profile.xp);
+  const toNext = nextLvlXP(profile.lvl);
+  const inLvl = (profile.lvl===1?0:nextLvlXP(profile.lvl-1));
+  const curInBand = profile.xp - inLvl;
+  const band = toNext===Infinity ? 'MAX' : `${curInBand}/${toNext-inLvl}`;
+  xpEl.textContent = `LVL ${profile.lvl} · ${band} XP · 🔮${profile.orbs}`;
+  pSolvedEl.textContent = profile.solved;
+  bestEl.textContent = profile.bestMs ? msFmt(profile.bestMs) : '—';
+  accEl.textContent = profile.lastAcc==null ? '—' : `${Math.round(profile.lastAcc*100)}%`;
+  revealWordBtn.disabled = !(profile.lvl>=3 || profile.xp>=500);
+}
+updateProfileUI();
+
+/* ---------- Render & Interaction ---------- */
+function msFmt(ms){
+  const s=Math.floor(ms/1000), m=Math.floor(s/60), r=s%60;
+  return `${pad(m)}:${pad(r)}`;
+}
+function startTimer(){
+  stopTimer();
+  current.startedAt = now();
+  timerEl.textContent = "⏱ 00:00";
+  current.tickInt = setInterval(()=>{
+    timerEl.textContent = "⏱ " + msFmt(now()-current.startedAt);
+  }, 250);
+}
+function stopTimer(){ if(current.tickInt){ clearInterval(current.tickInt); current.tickInt=null; } }
+
+function seed(){
+  current.seed = Math.floor(Math.random()*1e9);
+  seedTag.textContent = `seed: ${current.seed.toString(36)}`;
+  Math.random = mulberry32(current.seed);
+}
+function mulberry32(a){ return function(){ let t = a += 0x6D2B79F5; t = Math.imul(t ^ t>>>15, t | 1); t ^= t + Math.imul(t ^ t>>>7, t | 61); return ((t ^ t>>>14) >>> 0) / 4294967296; } }
+
+function decorateCluesWithHints(list, sourceEntries){
+  const byAns = new Map();
+  for(const e of sourceEntries){
+    const key = lettersOnly(e.answer);
+    if(!key) continue;
+    if(!byAns.has(key)) byAns.set(key, (e.clue||key));
+  }
+  return list.map(x=>({ ...x, clue: byAns.get(x.answer) || x.answer }));
+}
+
+function firstEditableCell(grid){
+  for(let r=0;r<grid.length;r++)
+    for(let c=0;c<grid.length;c++)
+      if(!grid[r][c].block) return [r,c];
+  return [0,0];
+}
+
+function newPuzzle(){
+  seed();
+  const N = sizeForLevel(levelSel.value);
+  current.N = N;
+  const entries = selectedEntries();
+  const tries = levelSel.value==='hard' ? 40 : 28;
+  const {grid, state} = tryGenerate(entries, N, tries);
+  current.grid = grid;
+  current.across = decorateCluesWithHints(state.across, entries);
+  current.down   = decorateCluesWithHints(state.down, entries);
+  current.dir='across';
+  current.cur = firstEditableCell(grid) || [0,0];
+  current.mapClueFromCoord = buildClueCoordMap();
+  current.mapClueToIndex = buildClueIndexMap();
+  renderBoard();
+  renderClues();
+  startTimer();
+  persistPuzzleState(true);
+  const base = current.baseHints[levelSel.value] || 0;
+  if(base>0){ profile.orbs += base; saveProfile(profile); updateProfileUI(); }
+}
+function shuffleLayout(){ newPuzzle(); }
+
+function renderBoard(){
+  const N=current.N, g=current.grid;
+  boardEl.style.gridTemplateColumns = `repeat(${N}, 32px)`;
+  boardEl.innerHTML='';
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      const cell=g[r][c], d=document.createElement('div');
+      d.className='cell'+(cell.block?' block':'');
+      d.dataset.r=r; d.dataset.c=c;
+      if(cell.n) { const n=document.createElement('div'); n.className='n'; n.textContent=cell.n; d.appendChild(n); }
+      if(!cell.block){ d.appendChild(document.createTextNode((cell.user||' ').slice(0,1))); }
+      boardEl.appendChild(d);
+    }
+  }
+  highlightSelection();
+}
+function buildClueCoordMap(){
+  const map = new Map();
+  for(const w of current.across){ for(const [r,c] of w.coords){ map.set(`${r},${c}-across`, w); } }
+  for(const w of current.down){ for(const [r,c] of w.coords){ map.set(`${r},${c}-down`, w); } }
+  return map;
+}
+function buildClueIndexMap(){
+  const map=new Map();
+  current.across.forEach((w,i)=>map.set(`across-${w.n}`, i));
+  current.down.forEach((w,i)=>map.set(`down-${w.n}`, i));
+  return map;
+}
+function renderClues(){
+  cluesEl.innerHTML='';
+  const frag = document.createDocumentFragment();
+  function section(title, list, dir){
+    const h=document.createElement('h3'); h.textContent=title; frag.appendChild(h);
+    for(const w of list){
+      const el=document.createElement('div');
+      el.className='clue';
+      el.dataset.dir=dir; el.dataset.n=w.n;
+      el.innerHTML = `<b>${w.n}</b>. ${escapeHTML(w.clue)} <span class="muted">(${w.answer.length})</span>`;
+      el.addEventListener('click', ()=>{ selectWord(dir, w.n); });
+      frag.appendChild(el);
+    }
+  }
+  section('Across', current.across, 'across');
+  section('Down', current.down, 'down');
+  cluesEl.appendChild(frag);
+  syncClueSelection();
+}
+function escapeHTML(s){ return String(s).replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+function currentWord(){
+  const [r,c]=current.cur, key=`${r},${c}-${current.dir}`;
+  return current.mapClueFromCoord.get(key);
+}
+function selectWord(dir, n){
+  current.dir=dir;
+  const w = (dir==='across'? current.across: current.down).find(x=>x.n==n);
+  if(!w) return;
+  current.cur = w.coords[0];
+  highlightSelection();
+  syncClueSelection();
+  scrollClueIntoView(dir,n);
+}
+function scrollClueIntoView(dir,n){
+  const el = cluesEl.querySelector(`.clue[data-dir="${dir}"][data-n="${n}"]`);
+  if(el) el.scrollIntoView({block:'nearest'});
+}
+function highlightSelection(){
+  const cells = boardEl.querySelectorAll('.cell'); cells.forEach(x=>x.classList.remove('hi','cur','sel','bad'));
+  const w = currentWord();
+  if(w){
+    for(const [r,c] of w.coords){
+      const el = cellEl(r,c);
+      if(el) el.classList.add('hi');
+    }
+  }
+  const [r,c]=current.cur; const curEl=cellEl(r,c);
+  if(curEl){ curEl.classList.add('cur','sel'); }
+}
+function syncClueSelection(){
+  cluesEl.querySelectorAll('.clue').forEach(el=>el.classList.remove('sel'));
+  const w=currentWord(); if(!w) return;
+  const el = cluesEl.querySelector(`.clue[data-dir="${current.dir}"][data-n="${w.n}"]`);
+  if(el) el.classList.add('sel');
+}
+function cellEl(r,c){ return boardEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`); }
+
+boardEl.addEventListener('click', (e)=>{
+  const cell=e.target.closest('.cell'); if(!cell) return;
+  const r=+cell.dataset.r, c=+cell.dataset.c;
+  if(current.grid[r][c].block) return;
+  const hasAcross = current.mapClueFromCoord.has(`${r},${c}-across`);
+  const hasDown   = current.mapClueFromCoord.has(`${r},${c}-down`);
+  if(current.dir==='across' && !hasAcross && hasDown) current.dir='down';
+  if(current.dir==='down' && !hasDown && hasAcross) current.dir='across';
+  current.cur=[r,c];
+  highlightSelection(); syncClueSelection();
+});
+document.addEventListener('keydown', (e)=>{
+  if(!current.grid) return;
+  const k=e.key;
+  if(k===' '){ e.preventDefault(); current.dir = (current.dir==='across')?'down':'across'; highlightSelection(); syncClueSelection(); return; }
+  if(k==='ArrowRight'){ moveCursor(0,+1); return; }
+  if(k==='ArrowLeft'){ moveCursor(0,-1); return; }
+  if(k==='ArrowDown'){ moveCursor(+1,0); return; }
+  if(k==='ArrowUp'){ moveCursor(-1,0); return; }
+  if(k==='Backspace'){ e.preventDefault(); writeChar('', true); return; }
+  if(/^[a-zA-Z]$/.test(k)){ writeChar(k.toUpperCase()); return; }
+});
+function moveCursor(dr,dc){
+  let [r,c]=current.cur; const N=current.N;
+  for(;;){
+    r=clamp(r+dr,0,N-1); c=clamp(c+dc,0,N-1);
+    if(!current.grid[r][c].block) break;
+    if((dr===0 && (c===0||c===N-1)) || (dc===0 && (r===0||r===N-1))) break;
+  }
+  current.cur=[r,c];
+  highlightSelection(); syncClueSelection();
+}
+function nextCellInDir([r,c],dir,back=false){
+  const step = back?-1:1;
+  return dir==='across' ? [r, clamp(c+step,0,current.N-1)] : [clamp(r+step,0,current.N-1), c];
+}
+function writeChar(ch, backspace=false){
+  const [r,c]=current.cur;
+  const cell=current.grid[r][c]; if(cell.block) return;
+  if(backspace){
+    if(cell.user){ cell.user=''; }
+    else{
+      const prev = nextCellInDir([r,c], current.dir, true);
+      if(!current.grid[prev[0]][prev[1]].block) current.cur=prev;
+      current.grid[current.cur[0]][current.cur[1]].user='';
+    }
+  } else {
+    cell.user = ch;
+    const w=currentWord();
+    if(w){
+      const i = w.coords.findIndex(([rr,cc])=>rr===r && cc===c);
+      if(i>=0 && i < w.coords.length-1){ current.cur = w.coords[i+1]; }
+    } else {
+      current.cur = nextCellInDir([r,c], current.dir, false);
+    }
+  }
+  const el = cellEl(r,c); if(el && !cell.block){
+    let tn = Array.from(el.childNodes).find(n=>n.nodeType===3);
+    if(!tn){ tn=document.createTextNode(''); el.appendChild(tn); }
+    tn.nodeValue = (cell.user||' ');
+  }
+  highlightSelection(); syncClueSelection();
+  persistPuzzleState();
+}
+
+/* ---------- Check & Reveal ---------- */
+function checkPuzzle(){
+  if(!current.grid) return;
+  let correct=0, total=0;
+  const N=current.N;
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      const cell=current.grid[r][c];
+      if(cell.block) continue;
+      total++;
+      const good = (cell.user||'') === (cell.ch||'');
+      const el = cellEl(r,c);
+      if(el) el.classList.toggle('bad', !good && (cell.user||'').length>0);
+      if(good) correct++;
+    }
+  }
+  const acc = correct/total;
+  profile.lastAcc = acc;
+  saveProfile(profile); updateProfileUI();
+  maybeComplete();
+}
+function maybeComplete(){
+  for(let r=0;r<current.N;r++) for(let c=0;c<N;c++){
+    const cell=current.grid[r][c]; if(cell.block) continue;
+    if((cell.user||'') !== (cell.ch||'')) return false;
+  }
+  stopTimer();
+  const elapsed = now()-current.startedAt;
+  if(!profile.bestMs || elapsed < profile.bestMs) profile.bestMs = elapsed;
+  profile.solved += 1;
+  const lvl=levelSel.value;
+  const base = (lvl==='easy'?40:(lvl==='medium'?70:110));
+  const speed = Math.max(0, 80 - Math.floor(elapsed/1000/10));
+  const acc = profile.lastAcc || 1;
+  const accBonus = Math.floor(50*acc);
+  const hintBonus = Math.min(30, current.hintStreak||0);
+  const xpGain = base + speed + accBonus + hintBonus;
+  profile.xp += xpGain;
+  profile.orbs += 2 + Math.floor(acc*2);
+  saveProfile(profile); updateProfileUI();
+  alert(`Puzzle complete!\nTime: ${msFmt(elapsed)}\nXP +${xpGain} · 🔮 earned: ${2+Math.floor(acc*2)}`);
+  return true;
+}
+
+let lastCorrectStreak=0;
+current.hintStreak=0;
+
+function revealLetter(){
+  if(profile.orbs < current.revealCost){ alert('Not enough 🔮'); return; }
+  const w=currentWord(); if(!w) return;
+  const target = w.coords.find(([r,c])=>{
+    const cell=current.grid[r][c];
+    return (cell.user||'') !== (cell.ch||'');
+  });
+  if(!target){ alert('This word is already correct!'); return; }
+  const [r,c]=target; const cell=current.grid[r][c];
+  cell.user = cell.ch;
+  const el=cellEl(r,c); if(el){
+    let tn = Array.from(el.childNodes).find(n=>n.nodeType===3);
+    if(!tn){ tn=document.createTextNode(''); el.appendChild(tn); }
+    tn.nodeValue=cell.user;
+  }
+  profile.orbs -= current.revealCost; saveProfile(profile); updateProfileUI();
+  highlightSelection();
+  maybeComplete();
+}
+function revealWord(){
+  if(!(profile.lvl>=3 || profile.xp>=500)){ alert('Unlock Reveal Word at LVL 3 or 500 XP'); return; }
+  if(profile.orbs < current.revealWordCost){ alert('Not enough 🔮 (need '+current.revealWordCost+')'); return; }
+  const w=currentWord(); if(!w) return;
+  for(const [r,c] of w.coords){
+    const cell=current.grid[r][c]; cell.user = cell.ch;
+    const el=cellEl(r,c); if(el){
+      let tn = Array.from(el.childNodes).find(n=>n.nodeType===3);
+      if(!tn){ tn=document.createTextNode(''); el.appendChild(tn); }
+      tn.nodeValue=cell.user;
+    }
+  }
+  profile.orbs -= current.revealWordCost; saveProfile(profile); updateProfileUI();
+  highlightSelection();
+  maybeComplete();
+}
+
+/* ---------- Persistence ---------- */
+const PUZ_KEY = "crossbuilder:v1:puzzle";
+function persistPuzzleState(fresh=false){
+  if(!current.grid) return;
+  const N=current.N;
+  const gridState=[];
+  for(let r=0;r<N;r++){
+    const row=[];
+    for(let c=0;c<N;c++){
+      const cell=current.grid[r][c];
+      row.push({u:cell.user||'', a:cell.ch||'', b:+cell.block, n:cell.n||0});
+    }
+    gridState.push(row);
+  }
+  const data = {
+    N, gridState, level:levelSel.value,
+    seed: current.seed, startedAt: fresh? now(): current.startedAt
+  };
+  localStorage.setItem(PUZ_KEY, JSON.stringify(data));
+}
+function tryResume(){
+  const raw=localStorage.getItem(PUZ_KEY); if(!raw) return false;
+  try{
+    const data=JSON.parse(raw);
+    levelSel.value = data.level || 'medium';
+    applyTheme();
+    current.N = data.N;
+    current.seed = data.seed||0; seedTag.textContent = `seed: ${current.seed?current.seed.toString(36):'—'}`;
+    const N=data.N, g=emptyGrid(N);
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+      const s = data.gridState[r][c];
+      g[r][c].block = !!s.b;
+      g[r][c].ch = s.a || null;
+      g[r][c].user = s.u || '';
+      g[r][c].n = s.n||null;
+    }
+    current.grid=g;
+    const {across,down}=finalizeBlocks(g);
+    // Generic clues on resume (original clue mapping is not persisted)
+    current.across=across.map(w=>({ ...w, clue:`Across ${w.n}` }));
+    current.down=down.map(w=>({ ...w, clue:`Down ${w.n}` }));
+    current.mapClueFromCoord = buildClueCoordMap();
+    current.mapClueToIndex = buildClueIndexMap();
+    current.cur = firstEditableCell(g);
+    renderBoard(); renderClues();
+    current.startedAt = data.startedAt||now();
+    startTimer();
+    return true;
+  }catch{ return false; }
+}
+
+/* ---------- Export ---------- */
+function exportCurrent(){
+  if(!current.grid) return;
+  const N=current.N;
+  const placed=[];
+  for(const dir of ['across','down']){
+    for(const w of current[dir]){
+      placed.push({dir, n:w.n, answer:w.answer, clue:w.clue, coords:w.coords});
+    }
+  }
+  const payload = { seed: current.seed, N, placed };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`crossword_${current.seed.toString(36)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/* ---------- File Loading (JSON/CSV) -> merge into MASTER_POOL ---------- */
+fileInput.addEventListener('change', async (e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  const text=await f.text();
+  let entries=[];
+  if(f.name.toLowerCase().endsWith('.json')){
+    try{
+      const obj=JSON.parse(text);
+      if(!obj || !Array.isArray(obj.entries)) throw new Error('Invalid JSON wordlist: missing entries[]');
+      entries = sanitizeEntries(obj.entries);
+    }catch(err){ alert(String(err)); return; }
+  } else if(f.name.toLowerCase().endsWith('.csv')){
+    const rows = parseCSV(text);
+    let i=0;
+    if(rows[0] && rows[0][0]?.toLowerCase()==='answer') i=1;
+    for(;i<rows.length;i++){
+      const [ans, ...rest]=rows[i];
+      if(!ans) continue;
+      const clue = rest.join(',').trim();
+      entries.push({answer:ans, clue: clue||ans});
+    }
+    entries = sanitizeEntries(entries);
+  } else {
+    alert('Unsupported file type (use .json or .csv)');
+    return;
+  }
+  MASTER_POOL.push(...entries);
+  alert(`Loaded ${entries.length} entries into the unified pool.`);
+});
+
+function parseCSV(text){
+  const out=[], re=/(,|\r?\n|^)(?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/g;
+  let arr=null, m;
+  while((m=re.exec(text))!==null){
+    const sep=m[1];
+    if(sep && sep.indexOf('\n')>=0){ out.push(arr=[]) }
+    else if(!arr){ arr=[]; out.push(arr); }
+    let val = m[2] ? m[2].replace(/""/g, '"') : m[3];
+    arr.push(val);
+  }
+  return out.filter(r=>r.some(x=>x && x.trim()!==''));
+}
+
+/* ---------- Events ---------- */
+newBtn.onclick = newPuzzle;
+regenBtn.onclick = shuffleLayout;
+checkBtn.onclick = checkPuzzle;
+revealBtn.onclick = revealLetter;
+revealWordBtn.onclick = revealWord;
+resetProgBtn.onclick = ()=>{
+  if(confirm('Reset profile (XP/Orbs/Best/Stats)? Current puzzle is kept.')){
+    profile = deepCopy(defaultProfile); saveProfile(profile); updateProfileUI();
+  }
+};
+exportBtn.onclick = exportCurrent;
+
+/* ---------- Auto Loader: add words.txt + words_dictionary.json to MASTER_POOL ---------- */
+async function preloadWordlists() {
+  try {
+    // words.txt (one word per line)
+    const txt = await fetch("words.txt").then(r => {
+      if(!r.ok) throw new Error("words.txt not found");
+      return r.text();
+    });
+    const txtEntries = txt.split(/\r?\n/).filter(w => w && w.length>=3)
+      .map(w => ({answer:w.trim(), clue:w.trim()}));
+    MASTER_POOL.push(...sanitizeEntries(txtEntries));
+  } catch (e) {
+    console.warn("Skipping words.txt:", e.message);
+  }
+  try {
+    // words_dictionary.json ({ "word": "definition" | 1 })
+    const dict = await fetch("words_dictionary.json").then(r => {
+      if(!r.ok) throw new Error("words_dictionary.json not found");
+      return r.json();
+    });
+    const dictEntries = Object.keys(dict)
+      .filter(w => w && w.length>=3)
+      .map(w => {
+        const v = dict[w];
+        const clue = (typeof v === 'string' && v.trim().length>2) ? v : w;
+        return {answer:w, clue};
+      });
+    MASTER_POOL.push(...sanitizeEntries(dictEntries));
+  } catch (e) {
+    console.warn("Skipping words_dictionary.json:", e.message);
+  }
+  console.log("Unified pool size:", MASTER_POOL.length);
+}
+
+/* ---------- Boot ---------- */
+async function initGame() {
+  // seed the unified pool with built-ins
+  for(const s of BUILT_SETS) MASTER_POOL.push(...sanitizeEntries(s.entries));
+  // attempt to add local big lists
+  await preloadWordlists();
+  // resume or start fresh
+  if(!tryResume()){ newPuzzle(); }
+}
+initGame();
+
+/* ---------- Optional: simple accuracy streak ---------- */
+function updateStreak(lastInputCorrect){
+  if(lastInputCorrect){
+    lastCorrectStreak++;
+    if(lastCorrectStreak%10===0){
+      profile.orbs+=1; current.hintStreak=(current.hintStreak||0)+5; saveProfile(profile); updateProfileUI();
+    }
+  } else lastCorrectStreak=0;
+}
+function msSinceStart(){ return now() - (current.startedAt||now()); }
+</script>
+</body>
+</html>
+

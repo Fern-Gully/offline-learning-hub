@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tower Jumper: Neon Skies</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #111;
+      font-family: monospace;
+      color: #fff;
+    }
+    canvas {
+      display: block;
+      background: linear-gradient(to top, #0f0f0f, #222244);
+    }
+    #scoreDisplay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="scoreDisplay">Score: 0 | Highscore: 0</div>
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const gravity = 0.5;
+    const jumpPower = -12;
+    const platformSpeed = 1.5;
+    const platformWidth = 100;
+    const platformHeight = 10;
+    const playerSize = 30;
+    let highscore = +localStorage.getItem("towerJumperHigh") || 0;
+
+    const player = {
+      x: canvas.width / 2 - playerSize / 2,
+      y: canvas.height - 100,
+      vx: 0,
+      vy: 0,
+      width: playerSize,
+      height: playerSize,
+      color: "#00ffff",
+      onGround: false
+    };
+
+    const platforms = [];
+    let score = 0;
+    let scrollOffset = 0;
+
+    function createPlatform(x, y) {
+      return {
+        x,
+        y,
+        width: platformWidth,
+        height: platformHeight,
+        color: "#00ff00"
+      };
+    }
+
+    // Initialize platforms
+    for (let i = 0; i < 10; i++) {
+      let x = Math.random() * (canvas.width - platformWidth);
+      let y = canvas.height - i * 100;
+      platforms.push(createPlatform(x, y));
+    }
+
+    function drawRect(obj) {
+      ctx.fillStyle = obj.color;
+      ctx.fillRect(obj.x, obj.y, obj.width, obj.height);
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Move and draw platforms
+      platforms.forEach(p => {
+        p.y += platformSpeed;
+        drawRect(p);
+      });
+
+      // Remove platforms out of view
+      while (platforms.length && platforms[0].y > canvas.height) {
+        platforms.shift();
+        let newY = platforms[platforms.length - 1].y - 100;
+        platforms.push(createPlatform(Math.random() * (canvas.width - platformWidth), newY));
+        score++;
+      }
+
+      // Player physics
+      player.vy += gravity;
+      player.y += player.vy;
+
+      if (player.x < 0) player.x = 0;
+      if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+      // Platform collision
+      player.onGround = false;
+      for (let p of platforms) {
+        if (
+          player.vy >= 0 &&
+          player.x + player.width > p.x &&
+          player.x < p.x + p.width &&
+          player.y + player.height >= p.y &&
+          player.y + player.height <= p.y + p.height
+        ) {
+          player.vy = jumpPower;
+          player.onGround = true;
+        }
+      }
+
+      // Draw player
+      drawRect(player);
+
+      // Controls
+      if (keys["ArrowLeft"]) player.x -= 5;
+      if (keys["ArrowRight"]) player.x += 5;
+
+      // Death
+      if (player.y > canvas.height) {
+        if (score > highscore) {
+          highscore = score;
+          localStorage.setItem("towerJumperHigh", highscore);
+        }
+        alert("Game Over! Score: " + score);
+        document.location.reload();
+      }
+
+      document.getElementById("scoreDisplay").textContent =
+        "Score: " + score + " | Highscore: " + highscore;
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    const keys = {};
+    window.addEventListener("keydown", (e) => (keys[e.key] = true));
+    window.addEventListener("keyup", (e) => (keys[e.key] = false));
+
+    gameLoop();
+  </script>
+</body>
+</html>

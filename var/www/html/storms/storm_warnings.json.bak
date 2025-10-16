@@ -1,0 +1,40 @@
+{
+  "type": "FeatureCollection",
+  "name": "StormWarnings",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.7613847793,
+          -24.6436910529
+        ]
+      },
+      "properties": {
+        "WarningTitle": "MONITOR CONDITIONS - Diamantina (LGA) - FLOOD - Issued at 7:30am, Monday 24 March 2025",
+        "WarningLevel": "Advice",
+        "WarningType": "Flood",
+        "ModifiedDate": "2025-03-23T21:30:00Z",
+        "PolygonCoords": "-23.1737045437117,140.827443582245 -23.3856341658427,141.034810525604 -23.2923257804651,141.155660134979 -23.6903182362339,141.526448709198 -23.709180340538,141.68575046701 -23.6903182362339,141.683003884979 -23.7104377172315,141.989247781464 -23.6928333409508,141.990621072479 -23.6991208907785,142.143056375214 -24.0921161344706,142.100484353729 -24.1673138859199,142.022206765839 -24.0595167228261,141.917836648651 -24.1560370422983,141.804540139862 -24.3088160612765,141.963841897674 -24.3426030026083,141.923329812714 -24.3538633143049,141.929509622284 -24.4026464196471,141.862218362518 -24.5164003649671,141.969335061737 -24.5332671931121,141.956288797089 -24.5351411452735,141.928136331268 -24.5532545735733,141.902730447479 -24.5576263885692,141.874577981659 -24.5888492046743,141.853978616425 -24.6200642368377,141.808660012909 -24.6250579191447,141.775014383026 -24.632548068559,141.758534890839 -24.6312997414973,141.734502298065 -24.6362929749179,141.732442361542 -24.5838540769879,141.522328836152 -24.5763610118948,141.522328836152 -24.5744876755885,141.514775735566 -24.4814100952003,141.429631692597 -24.4814100952003,141.376073342988 -24.6294272275232,141.360280496308 -24.7273844017712,141.238057595918 -24.6862143287305,141.242864114472 -24.6693681046209,140.838429910371 -24.6943246618408,140.83568332834 -24.6980677144778,140.883061868379 -24.8427127199356,140.872075540254 -24.8408433864804,140.810964090059 -24.9853217190758,140.80135105295 -24.9927901301283,140.878941995332 -25.2259488140649,140.856969339082 -25.2122824612746,140.710713845918 -25.2079337543732,140.700414163301 -25.4648608843389,140.677068216036 -25.4735396935932,140.774571878145 -25.5268386341228,140.826070291231 -25.4952339765593,140.839803201387 -25.4797384596527,140.864522439668 -25.4661007525682,140.881688577363 -25.5237405061583,140.911214334199 -25.6791675992077,140.893361550996 -25.6816428883593,140.921514016817 -25.7113423462327,140.920827371309 -25.7181474284472,140.937306863496 -25.9949682659113,140.909841043184 -25.9949682659113,138.710515481663 -25.9955854436168,137.997777444555 -25.4524614993615,137.999837381078 -24.6699920794289,137.998464090063 -23.9353124484702,137.997777444555 -23.521066470193,137.999150735571 -23.5538013099411,138.464696389867 -23.4625011710984,138.591039163304 -23.514770374968,138.644597512913 -23.6110676611865,138.735234719945 -23.4763576769766,138.922002298069 -23.4473833238831,138.901402932835 -23.308091932695,139.074437600803 -23.3503360020073,139.121816140842 -23.3106143436418,139.175374490452 -23.4738384204973,139.338796121311 -23.5116222144553,139.292790872288 -23.5204368742198,139.47406528635 -23.670824532451,139.463765603733 -23.6972346576279,139.892232400607 -23.6764842944749,139.886739236545 -23.668309003989,139.873006326388 -23.6488120173431,139.870946389865 -23.6418930331995,139.863393289279 -23.6274248844627,139.862706643771 -23.5783470911944,139.934804422091 -23.5506540832492,139.937551004123 -23.5500246288684,139.928624612521 -23.485804460272,139.934117776584 -23.5235848239733,140.35571811838 -23.4177725284297,140.341985208224 -23.3446622066661,140.415456277559 -23.1572911877411,140.663335305879 -23.1888535476857,140.71964023752 -23.2235635429934,140.760838967989 -23.1737045437117,140.827443582245",
+        "Header": "The Diamantina Shire Local Disaster Management Group advises people in Bedourie, Birdsville and Betoota to MONITOR CONDITIONS of the minor flooding in the Diamantina River catchment.\nFor emergency help in floods and storms, call the QLD SES on 132 500 or download the SES Assistance QLD App. \nIn life threatening situations, call Triple Zero (000) immediately.",
+        "Impacts": "The Bureau of Meteorology advises Flood Warning for the Diamantina River http://www.bom.gov.au/.../flood/diamantina-river.shtml\n• Rainfall over the last several days has caused river level rises across the upper Diamantina River catchment. Minor flooding is occurring along the Diamantina River at Diamantina Lakes. River levels are likely to remain elevated over the next few days.\n• Moderate to heavy rainfall with thunderstorms are forecast for the next few days.\n• A flood watch, which includes the Diamantina River is current for parts of Lake Eyre Basin Rivers and Gulf of Carpentaria\nRivers.\n• Bridges and low lying roads may be impacted by floodwater.\n• Transportation may be out of service.\n• You will become isolated until flood waters recede.",
+        "WarningLevelSort": 3,
+        "ShouldDo": "• Find out how to get ready for a flood at the Get Ready Queensland website (Get Prepared) www.getready.qld.gov.au/get-prepared\n• Never drive, walk, ride through, play or swim in flood water. If it’s flooded, forget it.\n• Consider the consequences of road and bridge closures. Damage to roads, bridges or buildings caused by flooding and\nlandslip may exist in your area. Consider the need to make alternate arrangements for work, children, and travel.\n• Drive to conditions and remain alert. Be aware of road hazards including mud, debris, and water in low lying areas.\n• Obey all signs about road closures and instructions from emergency services.\n• If required, use sandbags to block toilets, sinks and drains to stop sewerage backflow.\n• Tell friends, family, and neighbours in the area.\nIf you find it hard to move quickly or have special or medical needs:\n• Use your Person-Centred Emergency Plan (P-CEP) now if you have one.\n• Make sure you have enough medicine for at least one week.\n• If anyone in your house uses powered medical equipment, like a dialysis machine or ventilator, decide now where you\nwill go in case you lose power.\n• Call your support person or service to organise transport if you need to leave.\n• Leaving early is safer than waiting.\nIf you are a tourist, visitor, camper or caravanner:\n• Campers and caravanners should start packing up now.\n• If you do not need to be in the warning area, leave now. Check road conditions and plan your route before you leave.\n• Be ready to move if the situation gets worse.\n• Ask the campground owners whether the site floods.\n• Check your surroundings of water catchments, and monitor conditions.",
+        "WarningArea": "Townships of Bedourie, Birdsville and Betoota",
+        "WarningPolygonCount": "",
+        "MoreInformation": "• Follow our local council social media – Diamantina Shire Council\n• Listen to your local radio ABC Western Queensland\n• For power outage information go to www.ergon.com.au/network\n• Check the latest weather, warnings, rainfall, and river heights at the Bureau of Meteorology Queensland website www.bom.gov.au/qld/\n• Check road closures and download this notice at https://www.diamantina.qld.gov.au/downloads/download/35/road-closures",
+        "NextUpdate": "As the situation changes",
+        "Symbology_level_type": "Flood_Advice",
+        "Warningfrom": "Diamantina Shire Local Disaster Management Group",
+        "UniqueID": "BS_250325_0640",
+        "GlobalID": "{53F4679E-3741-43AA-A90B-0B2791E75E63}",
+        "last_edited_date": "20250326021417.875000",
+        "CallToAction": "Flood - Adv - Monitor conditions",
+        "created_user": "SDCCWatchDesk",
+        "created_date": "20250324210425.897000",
+        "last_edited_user": "qps_piwu"
+      }
+    }
+  ]
+}

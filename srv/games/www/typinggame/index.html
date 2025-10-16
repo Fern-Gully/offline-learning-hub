@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>TypeRush — Learn to Type</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">⌨️ TypeRush</div>
+      <nav class="nav">
+        <button id="btn-menu" class="ghost">Menu</button>
+        <button id="btn-leaderboard" class="ghost">Leaderboard</button>
+        <button id="btn-help" class="ghost">Tutorial</button>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-sound" checked/>
+          <span>Sound</span>
+        </label>
+      </nav>
+    </header>
+
+    <main class="stage">
+      <canvas id="game" width="960" height="540"></canvas>
+
+      <!-- Main Menu Overlay -->
+      <section id="menu" class="overlay show">
+        <div class="panel">
+          <h1>TypeRush</h1>
+          <p class="muted">A fast, modern typing game inspired by Tux Typing.</p>
+          <div class="row">
+            <label>Difficulty</label>
+            <div class="seg">
+              <input type="radio" name="difficulty" id="diff-beginner" value="beginner" checked>
+              <label for="diff-beginner">Beginner</label>
+              <input type="radio" name="difficulty" id="diff-normal" value="normal">
+              <label for="diff-normal">Normal</label>
+              <input type="radio" name="difficulty" id="diff-challenge" value="challenge">
+              <label for="diff-challenge">Challenge</label>
+            </div>
+          </div>
+
+          <div class="row">
+            <label for="wordlist">Word List</label>
+            <select id="wordlist"></select>
+            <button id="btn-reload-wordlists" class="ghost small">↻</button>
+          </div>
+
+          <div class="row">
+            <label>Mode</label>
+            <div class="seg">
+              <input type="radio" name="mode" id="mode-classic" value="classic" checked>
+              <label for="mode-classic">Classic</label>
+              <input type="radio" name="mode" id="mode-marathon" value="marathon">
+              <label for="mode-marathon">Marathon</label>
+              <input type="radio" name="mode" id="mode-timed" value="timed">
+              <label for="mode-timed">Timed (3m)</label>
+            </div>
+          </div>
+
+          <div class="row">
+            <button id="btn-start" class="primary">Start</button>
+            <button id="btn-tutorial" class="ghost">Tutorial</button>
+            <button id="btn-leaderboard-menu" class="ghost">Leaderboard</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tutorial Overlay -->
+      <section id="tutorial" class="overlay">
+        <div class="panel">
+          <h2>How to Play</h2>
+          <ul class="bullets">
+            <li>Words fall from the top. Start typing to lock onto the nearest matching word.</li>
+            <li>Finish the word to destroy it. Missed words cost a life.</li>
+            <li>🎁 Golden words grant power‑ups: Slow Time, Blast, or x2 Score.</li>
+            <li>Level up by clearing words—each level falls faster and spawns more.</li>
+            <li>Accuracy and WPM (words per minute) influence your final score.</li>
+          </ul>
+          <div class="row">
+            <button class="primary" id="btn-tutorial-close">Got it</button>
+          </div>
+          <p class="muted small">Accessibility: use your OS screen reader, and increase font scale in Settings (Ctrl + '+').</p>
+        </div>
+      </section>
+
+      <!-- Pause Overlay -->
+      <section id="pause" class="overlay">
+        <div class="panel">
+          <h2>Paused</h2>
+          <div class="row">
+            <button id="btn-resume" class="primary">Resume</button>
+            <button id="btn-exit" class="ghost">Exit</button>
+          </div>
+          <p class="muted small">Tip: press <kbd>Esc</kbd> to pause/resume.</p>
+        </div>
+      </section>
+
+      <!-- Game Over Overlay -->
+      <section id="gameover" class="overlay">
+        <div class="panel">
+          <h2>Game Over</h2>
+          <div id="stats"></div>
+          <form id="submit-form" class="row">
+            <input type="text" id="player-name" placeholder="Your name" maxlength="20" required/>
+            <button id="btn-submit-score" class="primary" type="submit">Submit Score</button>
+          </form>
+          <div class="row">
+            <button id="btn-retry" class="ghost">Retry</button>
+            <button id="btn-exit-over" class="ghost">Exit</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Leaderboard Overlay -->
+      <section id="leaderboard" class="overlay">
+        <div class="panel">
+          <h2>Leaderboard</h2>
+          <div class="row">
+            <select id="lb-filter-diff">
+              <option value="">All Difficulties</option>
+              <option value="beginner">Beginner</option>
+              <option value="normal">Normal</option>
+              <option value="challenge">Challenge</option>
+            </select>
+            <select id="lb-filter-list">
+              <option value="">All Wordlists</option>
+            </select>
+            <button id="btn-refresh-lb" class="ghost small">↻</button>
+          </div>
+          <table id="lb-table">
+            <thead><tr><th>#</th><th>Name</th><th>Score</th><th>WPM</th><th>Acc</th><th>Level</th><th>Diff</th><th>List</th><th>Date</th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <div class="row">
+            <button id="btn-close-lb" class="ghost">Close</button>
+          </div>
+          <p class="muted small">Scores saved on server. Your progress is stored in your browser.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

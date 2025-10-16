@@ -1,0 +1,7 @@
+{
+  "wordlists": [
+    { "id": "beginner.txt",  "filename": "beginner.txt",  "title": "Beginner (3–6 letters)" },
+    { "id": "normal.txt",    "filename": "normal.txt",    "title": "Normal (4–8 letters)" },
+    { "id": "challenge.txt", "filename": "challenge.txt", "title": "Challenge (5–12 letters)" }
+  ]
+}

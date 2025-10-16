@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gravity Painter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a0033 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        #gameContainer {
+            position: relative;
+            box-shadow: 0 0 50px rgba(138, 43, 226, 0.5);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        canvas {
+            display: block;
+            background: #000;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        #score {
+            font-size: 32px;
+            font-weight: bold;
+            color: #00ffff;
+            margin-bottom: 10px;
+        }
+        #particles {
+            color: #ff00ff;
+        }
+        #message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.8);
+            z-index: 20;
+            display: none;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.7);
+            font-size: 16px;
+            text-align: center;
+            z-index: 10;
+        }
+        .glow {
+            animation: glow 1s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(138, 43, 226, 0.8); }
+            to { text-shadow: 0 0 40px rgba(138, 43, 226, 1), 0 0 60px rgba(0, 255, 255, 0.8); }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="canvas"></canvas>
+        <div id="ui">
+            <div id="score">0</div>
+            <div id="particles">Particles: 0</div>
+            <div>Gravity: <span id="gravityMode">DOWN</span></div>
+        </div>
+        <div id="message"></div>
+        <div id="instructions">
+            Click to spawn particles • ARROW KEYS to change gravity • Avoid RED obstacles • Paint the canvas!
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 900;
+        canvas.height = 600;
+
+        const game = {
+            particles: [],
+            obstacles: [],
+            score: 0,
+            particleCount: 0,
+            gravity: { x: 0, y: 0.3 },
+            gravityDirection: 'DOWN',
+            colors: ['#ff00ff', '#00ffff', '#ffff00', '#00ff00', '#ff0066', '#6600ff'],
+            gameOver: false,
+            trails: [],
+            spawnCooldown: 0
+        };
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.radius = Math.random() * 3 + 2;
+                this.color = game.colors[Math.floor(Math.random() * game.colors.length)];
+                this.life = 1;
+                this.decay = Math.random() * 0.002 + 0.001;
+                this.trail = [];
+            }
+
+            update() {
+                this.vx += game.gravity.x;
+                this.vy += game.gravity.y;
+                
+                this.vx *= 0.99;
+                this.vy *= 0.99;
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < this.radius) {
+                    this.x = this.radius;
+                    this.vx *= -0.7;
+                }
+                if (this.x > canvas.width - this.radius) {
+                    this.x = canvas.width - this.radius;
+                    this.vx *= -0.7;
+                }
+                if (this.y < this.radius) {
+                    this.y = this.radius;
+                    this.vy *= -0.7;
+                }
+                if (this.y > canvas.height - this.radius) {
+                    this.y = canvas.height - this.radius;
+                    this.vy *= -0.7;
+                }
+
+                this.trail.push({ x: this.x, y: this.y, life: 1 });
+                if (this.trail.length > 15) this.trail.shift();
+
+                this.trail.forEach(t => t.life *= 0.95);
+
+                this.life -= this.decay;
+
+                for (let obs of game.obstacles) {
+                    if (this.checkCollision(obs)) {
+                        game.gameOver = true;
+                        return false;
+                    }
+                }
+
+                game.score += 0.1;
+
+                return this.life > 0;
+            }
+
+            checkCollision(obs) {
+                const dx = this.x - Math.max(obs.x, Math.min(this.x, obs.x + obs.width));
+                const dy = this.y - Math.max(obs.y, Math.min(this.y, obs.y + obs.height));
+                return (dx * dx + dy * dy) < (this.radius * this.radius);
+            }
+
+            draw() {
+                this.trail.forEach((t, i) => {
+                    const alpha = t.life * this.life * (i / this.trail.length);
+                    ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                    ctx.fillRect(t.x, t.y, 2, 2);
+                });
+
+                const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                gradient.addColorStop(0, this.color);
+                gradient.addColorStop(1, this.color + '00');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = this.color;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        class Obstacle {
+            constructor() {
+                this.width = Math.random() * 60 + 40;
+                this.height = Math.random() * 60 + 40;
+                this.x = Math.random() * (canvas.width - this.width);
+                this.y = Math.random() * (canvas.height - this.height);
+                this.pulse = Math.random() * Math.PI * 2;
+            }
+
+            update() {
+                this.pulse += 0.05;
+            }
+
+            draw() {
+                const pulseSize = Math.sin(this.pulse) * 3;
+                
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#ff0000';
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(
+                    this.x - pulseSize, 
+                    this.y - pulseSize, 
+                    this.width + pulseSize * 2, 
+                    this.height + pulseSize * 2
+                );
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = '#330000';
+                ctx.fillRect(this.x + 5, this.y + 5, this.width - 10, this.height - 10);
+            }
+        }
+
+        function spawnObstacles() {
+            const numObstacles = Math.floor(game.score / 500) + 3;
+            game.obstacles = [];
+            for (let i = 0; i < numObstacles; i++) {
+                let attempts = 0;
+                let validPosition = false;
+                let obs;
+                
+                while (!validPosition && attempts < 50) {
+                    obs = new Obstacle();
+                    validPosition = true;
+                    
+                    if (obs.x < 150 && obs.y < 150) validPosition = false;
+                    
+                    for (let other of game.obstacles) {
+                        const dx = obs.x - other.x;
+                        const dy = obs.y - other.y;
+                        if (Math.abs(dx) < 150 && Math.abs(dy) < 150) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+                
+                if (validPosition) game.obstacles.push(obs);
+            }
+        }
+
+        function setGravity(direction) {
+            game.gravityDirection = direction;
+            const strength = 0.3;
+            
+            switch(direction) {
+                case 'DOWN':
+                    game.gravity = { x: 0, y: strength };
+                    break;
+                case 'UP':
+                    game.gravity = { x: 0, y: -strength };
+                    break;
+                case 'LEFT':
+                    game.gravity = { x: -strength, y: 0 };
+                    break;
+                case 'RIGHT':
+                    game.gravity = { x: strength, y: 0 };
+                    break;
+            }
+            
+            document.getElementById('gravityMode').textContent = direction;
+        }
+
+        canvas.addEventListener('click', (e) => {
+            if (game.gameOver) {
+                resetGame();
+                return;
+            }
+
+            if (game.spawnCooldown <= 0) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                for (let i = 0; i < 5; i++) {
+                    game.particles.push(new Particle(x, y));
+                    game.particleCount++;
+                }
+                
+                game.spawnCooldown = 5;
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (game.gameOver) return;
+            
+            switch(e.key) {
+                case 'ArrowUp':
+                    setGravity('UP');
+                    break;
+                case 'ArrowDown':
+                    setGravity('DOWN');
+                    break;
+                case 'ArrowLeft':
+                    setGravity('LEFT');
+                    break;
+                case 'ArrowRight':
+                    setGravity('RIGHT');
+                    break;
+            }
+        });
+
+        function resetGame() {
+            game.particles = [];
+            game.score = 0;
+            game.particleCount = 0;
+            game.gameOver = false;
+            game.spawnCooldown = 0;
+            setGravity('DOWN');
+            spawnObstacles();
+            document.getElementById('message').style.display = 'none';
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function gameLoop() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!game.gameOver) {
+                game.particles = game.particles.filter(p => p.update());
+                
+                game.obstacles.forEach(obs => obs.update());
+                
+                if (game.spawnCooldown > 0) game.spawnCooldown--;
+            }
+
+            game.obstacles.forEach(obs => obs.draw());
+            game.particles.forEach(p => p.draw());
+
+            document.getElementById('score').textContent = Math.floor(game.score);
+            document.getElementById('particles').textContent = `Particles: ${game.particles.length}`;
+
+            if (game.gameOver) {
+                const msg = document.getElementById('message');
+                msg.innerHTML = `GAME OVER<br><span style="font-size: 24px;">Score: ${Math.floor(game.score)}</span><br><span style="font-size: 18px;">Click to restart</span>`;
+                msg.style.display = 'block';
+                msg.className = 'glow';
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        spawnObstacles();
+        gameLoop();
+    </script>
+</body>
+</html>

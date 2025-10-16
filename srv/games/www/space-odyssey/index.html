@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Odyssey: Survival & Exploration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0ff;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .hudRow {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .hudItem {
+            background: rgba(0,20,40,0.8);
+            padding: 8px 15px;
+            border: 1px solid #0ff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,255,255,0.3);
+        }
+
+        .resource {
+            display: inline-block;
+            margin-right: 20px;
+        }
+
+        .bar {
+            display: inline-block;
+            width: 100px;
+            height: 10px;
+            background: rgba(0,50,50,0.5);
+            border: 1px solid #0ff;
+            margin-left: 10px;
+            vertical-align: middle;
+            position: relative;
+        }
+
+        .barFill {
+            position: absolute;
+            height: 100%;
+            background: linear-gradient(90deg, #0ff, #0f0);
+            transition: width 0.3s;
+        }
+
+        #canvas {
+            flex: 1;
+            cursor: crosshair;
+        }
+
+        #menu, #gameOver, #victory, #upgrade {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,20,40,0.95);
+            border: 2px solid #0ff;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 200;
+            box-shadow: 0 0 30px rgba(0,255,255,0.5);
+        }
+
+        h1 {
+            color: #0ff;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(0,255,255,0.8);
+            animation: pulse 2s infinite;
+        }
+
+        h2 {
+            color: #0f0;
+            margin-bottom: 20px;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        button {
+            background: linear-gradient(135deg, #0ff, #0f0);
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            pointer-events: auto;
+        }
+
+        button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(0,255,255,0.8);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .objective {
+            background: rgba(0,50,50,0.3);
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #0f0;
+        }
+
+        #minimap {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 200px;
+            height: 200px;
+            border: 2px solid #0ff;
+            background: rgba(0,20,40,0.8);
+            z-index: 100;
+        }
+
+        #inventory {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,20,40,0.9);
+            border: 1px solid #0ff;
+            padding: 15px;
+            z-index: 100;
+            border-radius: 5px;
+        }
+
+        .inventorySlot {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 1px solid #0ff;
+            margin: 2px;
+            text-align: center;
+            line-height: 50px;
+            background: rgba(0,50,50,0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .inventorySlot:hover {
+            background: rgba(0,100,100,0.5);
+            transform: scale(1.1);
+        }
+
+        .selected {
+            background: rgba(0,255,255,0.3) !important;
+            box-shadow: 0 0 10px #0ff;
+        }
+
+        #dialogue {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,20,40,0.95);
+            border: 2px solid #0f0;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 600px;
+            z-index: 150;
+            display: none;
+        }
+
+        .upgradeItem {
+            background: rgba(0,50,50,0.3);
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #0ff;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="hud">
+            <div class="hudRow">
+                <div class="hudItem">
+                    <span class="resource">Energy: <span id="energy">100</span>/100</span>
+                    <span class="bar"><span class="barFill" id="energyBar" style="width: 100%"></span></span>
+                </div>
+                <div class="hudItem">
+                    <span class="resource">Shield: <span id="shield">100</span>/100</span>
+                    <span class="bar"><span class="barFill" id="shieldBar" style="width: 100%"></span></span>
+                </div>
+                <div class="hudItem">
+                    <span class="resource">Fuel: <span id="fuel">100</span>/100</span>
+                    <span class="bar"><span class="barFill" id="fuelBar" style="width: 100%"></span></span>
+                </div>
+            </div>
+            <div class="hudRow">
+                <div class="hudItem">Crystals: <span id="crystals">0</span></div>
+                <div class="hudItem">Parts: <span id="parts">0</span></div>
+                <div class="hudItem">Data: <span id="data">0</span></div>
+                <div class="hudItem">Sector: <span id="sector">1-1</span></div>
+                <div class="hudItem">Score: <span id="score">0</span></div>
+            </div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+        
+        <div id="minimap">
+            <canvas id="minimapCanvas"></canvas>
+        </div>
+
+        <div id="inventory">
+            <div style="margin-bottom: 10px;">Inventory:</div>
+            <div id="inventorySlots"></div>
+        </div>
+
+        <div id="menu">
+            <h1>SPACE ODYSSEY</h1>
+            <h2>Survival & Exploration</h2>
+            <div class="objective">
+                <strong>Primary Mission:</strong><br>
+                Reach the Galactic Core and activate the Ancient Beacon
+            </div>
+            <div class="objective">
+                <strong>Objectives:</strong><br>
+                • Explore 10 sectors<br>
+                • Collect 50 crystals for warp drive<br>
+                • Find 5 alien artifacts<br>
+                • Survive hostile encounters<br>
+                • Upgrade your ship systems
+            </div>
+            <button id="startBtn">Launch Mission</button>
+            <br><br>
+            <div style="font-size: 0.9em; opacity: 0.7;">
+                Controls: WASD/Arrows - Move | Mouse - Aim/Shoot | Space - Boost | E - Interact
+            </div>
+        </div>
+
+        <div id="gameOver" style="display: none;">
+            <h1>MISSION FAILED</h1>
+            <h2 id="deathReason">Your ship was destroyed</h2>
+            <div id="finalStats"></div>
+            <button id="retryBtn">Try Again</button>
+        </div>
+
+        <div id="victory" style="display: none;">
+            <h1>MISSION COMPLETE!</h1>
+            <h2>You've activated the Ancient Beacon!</h2>
+            <div id="victoryStats"></div>
+            <button id="newGameBtn">New Game+</button>
+        </div>
+
+        <div id="upgrade" style="display: none;">
+            <h2>Station Upgrade Terminal</h2>
+            <div id="upgradeList"></div>
+            <button id="leaveBtn">Leave Station</button>
+        </div>
+
+        <div id="dialogue">
+            <div id="dialogueText"></div>
+            <button id="continueBtn">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimapCanvas');
+        const minimapCtx = minimapCanvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        minimapCanvas.width = 200;
+        minimapCanvas.height = 200;
+
+        const game = {
+            state: 'menu',
+            score: 0,
+            sector: { x: 1, y: 1 },
+            objectives: {
+                sectorsExplored: new Set(),
+                crystalsCollected: 0,
+                artifactsFound: 0,
+                enemiesDefeated: 0,
+                stationsVisited: 0
+            },
+            difficulty: 1,
+            time: 0
+        };
+
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            vx: 0,
+            vy: 0,
+            angle: 0,
+            radius: 15,
+            speed: 5,
+            boostSpeed: 10,
+            energy: 100,
+            maxEnergy: 100,
+            shield: 100,
+            maxShield: 100,
+            fuel: 100,
+            maxFuel: 100,
+            crystals: 0,
+            parts: 0,
+            data: 0,
+            weapons: {
+                laser: { damage: 10, cooldown: 0, maxCooldown: 10, energy: 5 },
+                missile: { damage: 30, cooldown: 0, maxCooldown: 60, ammo: 10 },
+                beam: { damage: 2, cooldown: 0, maxCooldown: 1, energy: 1, unlocked: false }
+            },
+            currentWeapon: 'laser',
+            inventory: new Array(8).fill(null),
+            upgrades: {
+                speed: 0,
+                shield: 0,
+                energy: 0,
+                weapons: 0
+            }
+        };
+
+        const projectiles = [];
+        const enemies = [];
+        const asteroids = [];
+        const pickups = [];
+        const particles = [];
+        const stations = [];
+        const planets = [];
+        const wormholes = [];
+        const stars = [];
+        const keys = {};
+        const mouse = { x: 0, y: 0, pressed: false };
+
+        for (let i = 0; i < 200; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2,
+                brightness: Math.random()
+            });
+        }
+
+        document.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+        });
+
+        document.addEventListener('keyup', e => {
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        canvas.addEventListener('mousedown', () => mouse.pressed = true);
+        canvas.addEventListener('mouseup', () => mouse.pressed = false);
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('retryBtn').addEventListener('click', () => location.reload());
+        document.getElementById('newGameBtn').addEventListener('click', () => location.reload());
+        document.getElementById('leaveBtn').addEventListener('click', closeUpgrade);
+        document.getElementById('continueBtn').addEventListener('click', closeDialogue);
+
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            game.state = 'playing';
+            generateSector();
+            showDialogue("Captain, we've entered Sector 1-1. Mission: reach the Galactic Core!");
+            gameLoop();
+        }
+
+        function generateSector() {
+            enemies.length = 0;
+            asteroids.length = 0;
+            pickups.length = 0;
+            stations.length = 0;
+            planets.length = 0;
+            wormholes.length = 0;
+
+            const sectorKey = `${game.sector.x}-${game.sector.y}`;
+            game.objectives.sectorsExplored.add(sectorKey);
+
+            const asteroidCount = 10 + Math.floor(Math.random() * 10);
+            for (let i = 0; i < asteroidCount; i++) {
+                asteroids.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    radius: 20 + Math.random() * 30,
+                    rotation: 0,
+                    rotSpeed: (Math.random() - 0.5) * 0.05,
+                    health: 3,
+                    type: Math.random() > 0.8 ? 'crystal' : 'rock'
+                });
+            }
+
+            const enemyCount = Math.min(3 + game.difficulty, 10);
+            for (let i = 0; i < enemyCount; i++) {
+                const type = Math.random() > 0.7 ? 'hunter' : 'scout';
+                enemies.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: 0,
+                    vy: 0,
+                    angle: Math.random() * Math.PI * 2,
+                    radius: type === 'hunter' ? 20 : 15,
+                    health: type === 'hunter' ? 50 : 30,
+                    maxHealth: type === 'hunter' ? 50 : 30,
+                    type: type,
+                    speed: type === 'hunter' ? 2 : 3,
+                    shootCooldown: 0,
+                    ai: {
+                        state: 'patrol',
+                        target: null,
+                        patrolAngle: Math.random() * Math.PI * 2
+                    }
+                });
+            }
+
+            if (Math.random() > 0.5) {
+                stations.push({
+                    x: canvas.width * (0.2 + Math.random() * 0.6),
+                    y: canvas.height * (0.2 + Math.random() * 0.6),
+                    radius: 40,
+                    rotation: 0,
+                    type: Math.random() > 0.5 ? 'trade' : 'repair',
+                    visited: false
+                });
+            }
+
+            const planetCount = 1 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < planetCount; i++) {
+                planets.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: 60 + Math.random() * 40,
+                    type: ['desert', 'ice', 'jungle', 'volcanic'][Math.floor(Math.random() * 4)],
+                    hasArtifact: Math.random() > 0.7 && game.objectives.artifactsFound < 5,
+                    scanned: false
+                });
+            }
+
+            wormholes.push({
+                x: canvas.width - 100,
+                y: canvas.height / 2,
+                radius: 30,
+                destination: { x: game.sector.x + 1, y: game.sector.y },
+                rotation: 0
+            });
+        }
+
+        function updatePlayer() {
+            const dx = mouse.x - player.x;
+            const dy = mouse.y - player.y;
+            player.angle = Math.atan2(dy, dx);
+
+            let targetSpeed = player.speed + player.upgrades.speed;
+            if (keys[' '] && player.fuel > 0) {
+                targetSpeed = player.boostSpeed + player.upgrades.speed * 2;
+                player.fuel -= 0.3;
+            }
+
+            if (keys['w'] || keys['arrowup']) {
+                player.vx += Math.cos(player.angle) * targetSpeed * 0.1;
+                player.vy += Math.sin(player.angle) * targetSpeed * 0.1;
+            }
+            if (keys['s'] || keys['arrowdown']) {
+                player.vx -= Math.cos(player.angle) * targetSpeed * 0.05;
+                player.vy -= Math.sin(player.angle) * targetSpeed * 0.05;
+            }
+            if (keys['a'] || keys['arrowleft']) {
+                player.vx -= Math.sin(player.angle) * targetSpeed * 0.1;
+                player.vy += Math.cos(player.angle) * targetSpeed * 0.1;
+            }
+            if (keys['d'] || keys['arrowright']) {
+                player.vx += Math.sin(player.angle) * targetSpeed * 0.1;
+                player.vy -= Math.cos(player.angle) * targetSpeed * 0.1;
+            }
+
+            player.vx *= 0.95;
+            player.vy *= 0.95;
+            player.x += player.vx;
+            player.y += player.vy;
+
+            if (player.x < 0) player.x = canvas.width;
+            if (player.x > canvas.width) player.x = 0;
+            if (player.y < 0) player.y = canvas.height;
+            if (player.y > canvas.height) player.y = 0;
+
+            if (mouse.pressed) {
+                const weapon = player.weapons[player.currentWeapon];
+                if (weapon.cooldown <= 0) {
+                    if (player.currentWeapon === 'missile' && weapon.ammo > 0) {
+                        createProjectile(player.x, player.y, player.angle, 'missile', weapon.damage);
+                        weapon.ammo--;
+                        weapon.cooldown = weapon.maxCooldown;
+                    } else if (player.energy >= (weapon.energy || 0)) {
+                        createProjectile(player.x, player.y, player.angle, player.currentWeapon, weapon.damage);
+                        player.energy -= weapon.energy || 0;
+                        weapon.cooldown = weapon.maxCooldown;
+                    }
+                }
+            }
+
+            Object.values(player.weapons).forEach(weapon => {
+                if (weapon.cooldown > 0) weapon.cooldown--;
+            });
+
+            if (player.shield < player.maxShield) player.shield += 0.05;
+            if (player.energy < player.maxEnergy) player.energy += 0.2;
+            if (player.fuel < player.maxFuel && !keys[' ']) player.fuel += 0.1;
+
+            if (keys['e']) {
+                stations.forEach(station => {
+                    const dist = Math.hypot(station.x - player.x, station.y - player.y);
+                    if (dist < station.radius + player.radius + 20) {
+                        openUpgradeMenu(station);
+                    }
+                });
+
+                planets.forEach(planet => {
+                    const dist = Math.hypot(planet.x - player.x, planet.y - player.y);
+                    if (dist < planet.radius + player.radius + 50 && !planet.scanned) {
+                        planet.scanned = true;
+                        player.data += 10;
+                        game.score += 100;
+                        if (planet.hasArtifact) {
+                            game.objectives.artifactsFound++;
+                            showDialogue(`Artifact discovered! (${game.objectives.artifactsFound}/5)`);
+                        }
+                    }
+                });
+            }
+
+            if (keys['1']) player.currentWeapon = 'laser';
+            if (keys['2'] && player.weapons.missile.ammo > 0) player.currentWeapon = 'missile';
+            if (keys['3'] && player.weapons.beam.unlocked) player.currentWeapon = 'beam';
+        }
+
+        function updateEnemies() {
+            enemies.forEach((enemy, index) => {
+                const distToPlayer = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                
+                if (distToPlayer < 300) {
+                    enemy.ai.state = 'attack';
+                } else if (enemy.ai.state === 'attack' && distToPlayer > 400) {
+                    enemy.ai.state = 'patrol';
+                }
+
+                if (enemy.ai.state === 'patrol') {
+                    enemy.ai.patrolAngle += 0.02;
+                    enemy.vx = Math.cos(enemy.ai.patrolAngle) * enemy.speed;
+                    enemy.vy = Math.sin(enemy.ai.patrolAngle) * enemy.speed;
+                } else if (enemy.ai.state === 'attack') {
+                    const angleToPlayer = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+                    enemy.angle = angleToPlayer;
+                    
+                    if (distToPlayer > 150) {
+                        enemy.vx = Math.cos(angleToPlayer) * enemy.speed;
+                        enemy.vy = Math.sin(angleToPlayer) * enemy.speed;
+                    } else {
+                        enemy.vx *= 0.9;
+                        enemy.vy *= 0.9;
+                    }
+
+                    if (enemy.shootCooldown <= 0 && distToPlayer < 300) {
+                        createProjectile(enemy.x, enemy.y, angleToPlayer, 'enemy', 10);
+                        enemy.shootCooldown = 60;
+                    }
+                }
+
+                enemy.x += enemy.vx;
+                enemy.y += enemy.vy;
+
+                if (enemy.x < 0) enemy.x = canvas.width;
+                if (enemy.x > canvas.width) enemy.x = 0;
+                if (enemy.y < 0) enemy.y = canvas.height;
+                if (enemy.y > canvas.height) enemy.y = 0;
+
+                if (enemy.shootCooldown > 0) enemy.shootCooldown--;
+
+                if (enemy.health <= 0) {
+                    createExplosion(enemy.x, enemy.y, enemy.radius * 2);
+                    enemies.splice(index, 1);
+                    game.score += enemy.type === 'hunter' ? 200 : 100;
+                    game.objectives.enemiesDefeated++;
+                    
+                    if (Math.random() > 0.5) {
+                        pickups.push({
+                            x: enemy.x,
+                            y: enemy.y,
+                            type: Math.random() > 0.7 ? 'crystal' : Math.random() > 0.5 ? 'parts' : 'energy',
+                            value: 10 + Math.floor(Math.random() * 20),
+                            bob: 0
+                        });
+                    }
+                }
+            });
+        }
+
+        function updateAsteroids() {
+            asteroids.forEach((asteroid, index) => {
+                asteroid.x += asteroid.vx;
+                asteroid.y += asteroid.vy;
+                asteroid.rotation += asteroid.rotSpeed;
+
+                if (asteroid.x < -asteroid.radius) asteroid.x = canvas.width + asteroid.radius;
+                if (asteroid.x > canvas.width + asteroid.radius) asteroid.x = -asteroid.radius;
+                if (asteroid.y < -asteroid.radius) asteroid.y = canvas.height + asteroid.radius;
+                if (asteroid.y > canvas.height + asteroid.radius) asteroid.y = -asteroid.radius;
+
+                if (asteroid.health <= 0) {
+                    createExplosion(asteroid.x, asteroid.y, asteroid.radius);
+                    
+                    if (asteroid.type === 'crystal') {
+                        pickups.push({
+                            x: asteroid.x,
+                            y: asteroid.y,
+                            type: 'crystal',
+                            value: 5 + Math.floor(Math.random() * 10),
+                            bob: 0
+                        });
+                    }
+                    
+                    asteroids.splice(index, 1);
+                    game.score += 50;
+                }
+            });
+        }
+
+        function updateProjectiles() {
+            projectiles.forEach((proj, index) => {
+                proj.x += proj.vx;
+                proj.y += proj.vy;
+                proj.life--;
+
+                if (proj.owner === 'player') {
+                    enemies.forEach(enemy => {
+                        const dist = Math.hypot(enemy.x - proj.x, enemy.y - proj.y);
+                        if (dist < enemy.radius) {
+                            enemy.health -= proj.damage + player.upgrades.weapons * 5;
+                            createExplosion(proj.x, proj.y, 10);
+                            proj.life = 0;
+                        }
+                    });
+
+                    asteroids.forEach(asteroid => {
+                        const dist = Math.hypot(asteroid.x - proj.x, asteroid.y - proj.y);
+                        if (dist < asteroid.radius) {
+                            asteroid.health--;
+                            createExplosion(proj.x, proj.y, 5);
+                            proj.life = 0;
+                        }
+                    });
+                } else if (proj.owner === 'enemy') {
+                    const dist = Math.hypot(player.x - proj.x, player.y - proj.y);
+                    if (dist < player.radius) {
+                        if (player.shield > 0) {
+                            player.shield -= proj.damage;
+                            if (player.shield < 0) player.shield = 0;
+                        } else {
+                            player.energy -= proj.damage;
+                        }
+                        createExplosion(proj.x, proj.y, 10);
+                        proj.life = 0;
+                        
+                        if (player.energy <= 0) {
+                            gameOver("Ship destroyed by enemy fire");
+                        }
+                    }
+                }
+
+                if (proj.life <= 0 || proj.x < 0 || proj.x > canvas.width || proj.y < 0 || proj.y > canvas.height) {
+                    projectiles.splice(index, 1);
+                }
+            });
+        }
+
+        function updatePickups() {
+            pickups.forEach((pickup, index) => {
+                pickup.bob = (pickup.bob || 0) + 0.05;
+                
+                const dist = Math.hypot(player.x - pickup.x, player.y - pickup.y);
+                if (dist < player.radius + 20) {
+                    if (pickup.type === 'crystal') {
+                        player.crystals += pickup.value;
+                        game.objectives.crystalsCollected += pickup.value;
+                    } else if (pickup.type === 'parts') {
+                        player.parts += pickup.value;
+                    } else if (pickup.type === 'energy') {
+                        player.energy = Math.min(player.maxEnergy, player.energy + pickup.value);
+                    }
+                    game.score += 25;
+                    pickups.splice(index, 1);
+                }
+            });
+        }
+
+        function updateParticles() {
+            particles.forEach((particle, index) => {
+                particle.x += particle.vx;
+                particle.y += particle.vy;
+                particle.life--;
+                particle.alpha = particle.life / particle.maxLife;
+                
+                if (particle.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+        }
+
+        function checkWormholes() {
+            wormholes.forEach(wormhole => {
+                wormhole.rotation += 0.02;
+                const dist = Math.hypot(player.x - wormhole.x, player.y - wormhole.y);
+                
+                if (dist < wormhole.radius) {
+                    game.sector = wormhole.destination;
+                    player.x = 100;
+                    player.y = canvas.height / 2;
+                    generateSector();
+                    showDialogue(`Entering Sector ${game.sector.x}-${game.sector.y}`);
+                }
+            });
+        }
+
+        function createProjectile(x, y, angle, type, damage) {
+            const speed = type === 'missile' ? 8 : 15;
+            projectiles.push({
+                x: x,
+                y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                type: type,
+                damage: damage,
+                life: 100,
+                color: type === 'enemy' ? '#f00' : type === 'missile' ? '#f0f' : '#0ff',
+                owner: type === 'enemy' ? 'enemy' : 'player'
+            });
+        }
+
+        function createParticle(x, y, vx, vy, color, life) {
+            particles.push({
+                x: x,
+                y: y,
+                vx: vx + (Math.random() - 0.5) * 2,
+                vy: vy + (Math.random() - 0.5) * 2,
+                color: color,
+                life: life,
+                maxLife: life,
+                alpha: 1,
+                size: 2 + Math.random() * 3
+            });
+        }
+
+        function createExplosion(x, y, radius) {
+            for (let i = 0; i < radius; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5;
+                createParticle(
+                    x,
+                    y,
+                    Math.cos(angle) * speed,
+                    Math.sin(angle) * speed,
+                    `hsl(${Math.random() * 60}, 100%, 50%)`,
+                    20 + Math.random() * 20
+                );
+            }
+        }
+
+        function drawBackground() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            stars.forEach(star => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
+                ctx.fillRect(star.x, star.y, star.size, star.size);
+                
+                star.x -= player.vx * 0.1 * star.size;
+                star.y -= player.vy * 0.1 * star.size;
+                
+                if (star.x < 0) star.x = canvas.width;
+                if (star.x > canvas.width) star.x = 0;
+                if (star.y < 0) star.y = canvas.height;
+                if (star.y > canvas.height) star.y = 0;
+            });
+        }
+
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.angle);
+            
+            ctx.strokeStyle = '#0ff';
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(player.radius, 0);
+            ctx.lineTo(-player.radius, -player.radius * 0.7);
+            ctx.lineTo(-player.radius * 0.5, 0);
+            ctx.lineTo(-player.radius, player.radius * 0.7);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.fillStyle = '#0ff';
+            ctx.beginPath();
+            ctx.arc(0, 0, player.radius * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+
+            if (player.shield < player.maxShield * 0.5) {
+                ctx.strokeStyle = `rgba(0, 255, 255, ${0.3 + Math.sin(Date.now() * 0.01) * 0.2})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+
+        function drawEnemies() {
+            enemies.forEach(enemy => {
+                ctx.save();
+                ctx.translate(enemy.x, enemy.y);
+                ctx.rotate(enemy.angle);
+                
+                const color = enemy.type === 'hunter' ? '#f00' : '#f80';
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color + '40';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.moveTo(enemy.radius * 0.8, 0);
+                ctx.lineTo(-enemy.radius * 0.8, -enemy.radius * 0.6);
+                ctx.lineTo(-enemy.radius * 0.4, 0);
+                ctx.lineTo(-enemy.radius * 0.8, enemy.radius * 0.6);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.restore();
+                
+                if (enemy.health < enemy.maxHealth) {
+                    ctx.fillStyle = '#f00';
+                    ctx.fillRect(enemy.x - 20, enemy.y - enemy.radius - 10, 40, 4);
+                    ctx.fillStyle = '#0f0';
+                    ctx.fillRect(enemy.x - 20, enemy.y - enemy.radius - 10, 40 * (enemy.health / enemy.maxHealth), 4);
+                }
+            });
+        }
+
+        function drawAsteroids() {
+            asteroids.forEach(asteroid => {
+                ctx.save();
+                ctx.translate(asteroid.x, asteroid.y);
+                ctx.rotate(asteroid.rotation);
+                
+                ctx.strokeStyle = asteroid.type === 'crystal' ? '#f0f' : '#888';
+                ctx.fillStyle = asteroid.type === 'crystal' ? 'rgba(255, 0, 255, 0.2)' : 'rgba(100, 100, 100, 0.3)';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                const sides = asteroid.type === 'crystal' ? 6 : 8;
+                for (let i = 0; i < sides; i++) {
+                    const angle = (i / sides) * Math.PI * 2;
+                    const variance = asteroid.type === 'crystal' ? 1 : (0.8 + Math.sin(i * 1.7) * 0.2);
+                    const x = Math.cos(angle) * asteroid.radius * variance;
+                    const y = Math.sin(angle) * asteroid.radius * variance;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+        }
+
+        function drawStations() {
+            stations.forEach(station => {
+                ctx.save();
+                ctx.translate(station.x, station.y);
+                ctx.rotate(station.rotation);
+                station.rotation += 0.005;
+                
+                ctx.strokeStyle = station.type === 'trade' ? '#0f0' : '#ff0';
+                ctx.fillStyle = station.type === 'trade' ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 255, 0, 0.2)';
+                ctx.lineWidth = 2;
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, station.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.arc(0, 0, station.radius * 1.3, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2;
+                    const x = Math.cos(angle) * station.radius;
+                    const y = Math.sin(angle) * station.radius;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+                
+                ctx.fillStyle = '#0ff';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(station.type === 'trade' ? 'TRADE STATION' : 'REPAIR STATION', station.x, station.y - station.radius - 20);
+            });
+        }
+
+        function drawPlanets() {
+            planets.forEach(planet => {
+                const gradient = ctx.createRadialGradient(planet.x, planet.y, 0, planet.x, planet.y, planet.radius);
+                switch(planet.type) {
+                    case 'desert':
+                        gradient.addColorStop(0, '#f4a460');
+                        gradient.addColorStop(1, '#8b4513');
+                        break;
+                    case 'ice':
+                        gradient.addColorStop(0, '#e0ffff');
+                        gradient.addColorStop(1, '#4682b4');
+                        break;
+                    case 'jungle':
+                        gradient.addColorStop(0, '#90ee90');
+                        gradient.addColorStop(1, '#228b22');
+                        break;
+                    case 'volcanic':
+                        gradient.addColorStop(0, '#ff6347');
+                        gradient.addColorStop(1, '#8b0000');
+                        break;
+                }
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(planet.x, planet.y, planet.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = 'rgba(100, 200, 255, 0.3)';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.arc(planet.x, planet.y, planet.radius + 5, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                if (!planet.scanned) {
+                    ctx.strokeStyle = '#0ff';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.arc(planet.x, planet.y, planet.radius + 20, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+                
+                if (planet.hasArtifact && !planet.scanned) {
+                    ctx.fillStyle = '#ff0';
+                    ctx.font = '12px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('ARTIFACT DETECTED', planet.x, planet.y - planet.radius - 30);
+                }
+            });
+        }
+
+        function drawWormholes() {
+            wormholes.forEach(wormhole => {
+                ctx.save();
+                ctx.translate(wormhole.x, wormhole.y);
+                ctx.rotate(wormhole.rotation);
+                
+                for (let i = 0; i < 3; i++) {
+                    ctx.strokeStyle = `rgba(255, 0, 255, ${0.5 - i * 0.15})`;
+                    ctx.lineWidth = 3 - i;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, wormhole.radius + i * 10, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, wormhole.radius);
+                gradient.addColorStop(0, '#f0f');
+                gradient.addColorStop(0.5, '#80f');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, wormhole.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+                
+                ctx.fillStyle = '#f0f';
+                ctx.font = '12px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(`WARP TO ${wormhole.destination.x}-${wormhole.destination.y}`, wormhole.x, wormhole.y - wormhole.radius - 20);
+            });
+        }
+
+        function drawProjectiles() {
+            projectiles.forEach(proj => {
+                ctx.fillStyle = proj.color;
+                ctx.strokeStyle = proj.color;
+                ctx.lineWidth = 2;
+                
+                if (proj.type === 'missile') {
+                    ctx.save();
+                    ctx.translate(proj.x, proj.y);
+                    ctx.rotate(Math.atan2(proj.vy, proj.vx));
+                    ctx.beginPath();
+                    ctx.moveTo(5, 0);
+                    ctx.lineTo(-5, -3);
+                    ctx.lineTo(-5, 3);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.restore();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(proj.x, proj.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+        }
+
+        function drawPickups() {
+            pickups.forEach(pickup => {
+                const y = pickup.y + Math.sin(pickup.bob) * 5;
+                
+                ctx.save();
+                ctx.translate(pickup.x, y);
+                ctx.rotate(Date.now() * 0.002);
+                
+                switch(pickup.type) {
+                    case 'crystal':
+                        ctx.fillStyle = '#f0f';
+                        ctx.strokeStyle = '#f0f';
+                        break;
+                    case 'parts':
+                        ctx.fillStyle = '#888';
+                        ctx.strokeStyle = '#fff';
+                        break;
+                    case 'energy':
+                        ctx.fillStyle = '#0ff';
+                        ctx.strokeStyle = '#0ff';
+                        break;
+                }
+                
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                if (pickup.type === 'crystal') {
+                    ctx.moveTo(0, -10);
+                    ctx.lineTo(7, 0);
+                    ctx.lineTo(0, 10);
+                    ctx.lineTo(-7, 0);
+                } else {
+                    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                ctx.restore();
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = particle.alpha;
+                ctx.fillStyle = particle.color;
+                ctx.fillRect(particle.x - particle.size/2, particle.y - particle.size/2, particle.size, particle.size);
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function drawMinimap() {
+            minimapCtx.fillStyle = 'rgba(0, 20, 40, 0.8)';
+            minimapCtx.fillRect(0, 0, 200, 200);
+            
+            minimapCtx.strokeStyle = 'rgba(0, 255, 255, 0.2)';
+            minimapCtx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                minimapCtx.beginPath();
+                minimapCtx.moveTo(i * 20, 0);
+                minimapCtx.lineTo(i * 20, 200);
+                minimapCtx.stroke();
+                minimapCtx.beginPath();
+                minimapCtx.moveTo(0, i * 20);
+                minimapCtx.lineTo(200, i * 20);
+                minimapCtx.stroke();
+            }
+            
+            const scale = 200 / Math.max(canvas.width, canvas.height);
+            
+            minimapCtx.fillStyle = '#0ff';
+            minimapCtx.fillRect(player.x * scale - 2, player.y * scale - 2, 4, 4);
+            
+            minimapCtx.fillStyle = '#f00';
+            enemies.forEach(enemy => {
+                minimapCtx.fillRect(enemy.x * scale - 1, enemy.y * scale - 1, 2, 2);
+            });
+            
+            minimapCtx.fillStyle = '#0f0';
+            stations.forEach(station => {
+                minimapCtx.fillRect(station.x * scale - 2, station.y * scale - 2, 4, 4);
+            });
+            
+            minimapCtx.fillStyle = '#f0f';
+            wormholes.forEach(wormhole => {
+                minimapCtx.beginPath();
+                minimapCtx.arc(wormhole.x * scale, wormhole.y * scale, 3, 0, Math.PI * 2);
+                minimapCtx.fill();
+            });
+        }
+
+        function updateHUD() {
+            document.getElementById('energy').textContent = Math.floor(player.energy);
+            document.getElementById('energyBar').style.width = (player.energy / player.maxEnergy * 100) + '%';
+            
+            document.getElementById('shield').textContent = Math.floor(player.shield);
+            document.getElementById('shieldBar').style.width = (player.shield / player.maxShield * 100) + '%';
+            
+            document.getElementById('fuel').textContent = Math.floor(player.fuel);
+            document.getElementById('fuelBar').style.width = (player.fuel / player.maxFuel * 100) + '%';
+            
+            document.getElementById('crystals').textContent = player.crystals;
+            document.getElementById('parts').textContent = player.parts;
+            document.getElementById('data').textContent = player.data;
+            document.getElementById('sector').textContent = `${game.sector.x}-${game.sector.y}`;
+            document.getElementById('score').textContent = game.score;
+        }
+
+        function showDialogue(text) {
+            const dialogue = document.getElementById('dialogue');
+            const dialogueText = document.getElementById('dialogueText');
+            dialogueText.textContent = text;
+            dialogue.style.display = 'block';
+            setTimeout(() => {
+                dialogue.style.display = 'none';
+            }, 3000);
+        }
+
+        function closeDialogue() {
+            document.getElementById('dialogue').style.display = 'none';
+        }
+
+        function openUpgradeMenu(station) {
+            if (station.visited) return;
+            station.visited = true;
+            game.objectives.stationsVisited++;
+            
+            const upgradeMenu = document.getElementById('upgrade');
+            const upgradeList = document.getElementById('upgradeList');
+            upgradeList.innerHTML = '';
+            
+            const upgrades = [
+                { name: 'Shield Boost', cost: 20, type: 'parts', fn: () => { player.maxShield += 20; player.shield = player.maxShield; player.upgrades.shield++; } },
+                { name: 'Energy Core', cost: 25, type: 'parts', fn: () => { player.maxEnergy += 20; player.energy = player.maxEnergy; player.upgrades.energy++; } },
+                { name: 'Thruster Upgrade', cost: 30, type: 'parts', fn: () => { player.speed += 1; player.upgrades.speed++; } },
+                { name: 'Weapon Systems', cost: 40, type: 'parts', fn: () => { player.upgrades.weapons++; } },
+                { name: 'Beam Weapon', cost: 50, type: 'crystals', fn: () => { player.weapons.beam.unlocked = true; } },
+                { name: 'Missile Ammo', cost: 10, type: 'crystals', fn: () => { player.weapons.missile.ammo += 5; } }
+            ];
+            
+            upgrades.forEach((upgrade, index) => {
+                const item = document.createElement('div');
+                item.className = 'upgradeItem';
+                const canBuy = player[upgrade.type === 'crystals' ? 'crystals' : 'parts'] >= upgrade.cost;
+                item.innerHTML = `
+                    <span>${upgrade.name}</span>
+                    <button id="upgrade${index}" ${canBuy ? '' : 'disabled'}>
+                        ${upgrade.cost} ${upgrade.type === 'crystals' ? 'Crystals' : 'Parts'}
+                    </button>
+                `;
+                upgradeList.appendChild(item);
+                
+                if (canBuy) {
+                    document.getElementById(`upgrade${index}`).addEventListener('click', () => {
+                        if (upgrade.type === 'crystals') {
+                            player.crystals -= upgrade.cost;
+                        } else {
+                            player.parts -= upgrade.cost;
+                        }
+                        upgrade.fn();
+                        closeUpgrade();
+                    });
+                }
+            });
+            
+            upgradeMenu.style.display = 'block';
+            game.state = 'upgrade';
+        }
+
+        function closeUpgrade() {
+            document.getElementById('upgrade').style.display = 'none';
+            game.state = 'playing';
+        }
+
+        function gameOver(reason) {
+            game.state = 'gameover';
+            document.getElementById('deathReason').textContent = reason;
+            document.getElementById('finalStats').innerHTML = `
+                <div>Final Score: ${game.score}</div>
+                <div>Sectors Explored: ${game.objectives.sectorsExplored.size}</div>
+                <div>Enemies Defeated: ${game.objectives.enemiesDefeated}</div>
+            `;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        function gameLoop() {
+            if (game.state !== 'playing') return;
+            
+            drawBackground();
+            
+            updatePlayer();
+            updateEnemies();
+            updateAsteroids();
+            updateProjectiles();
+            updatePickups();
+            updateParticles();
+            checkWormholes();
+            
+            drawPlanets();
+            drawStations();
+            drawWormholes();
+            drawAsteroids();
+            drawPickups();
+            drawEnemies();
+            drawProjectiles();
+            drawParticles();
+            drawPlayer();
+            
+            drawMinimap();
+            updateHUD();
+            
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
