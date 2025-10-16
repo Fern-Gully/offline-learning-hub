@@ -3,55 +3,417 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>QLD Bushfire Incidents — Local Cache</title>
+<title>QLD Bushfire Incidents — Offline Learning Hub</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
-  :root{
-    --bg:#0b0f14; --panel:#0e1520; --b:#1f2a38; --fg:#eef2f7; --muted:#9fb0c3;
-    --lvl-emerg:#d32f2f; --lvl-watch:#f57c00; --lvl-advice:#1976d2; --lvl-unk:#607d8b;
+  :root {
+    color-scheme: light;
+    --color-primary: #3a6954;
+    --color-primary-dark: #29503f;
+    --color-accent: #e87e3f;
+    --color-secondary: #4c91a1;
+    --color-sand: #f2e6d0;
+    --color-surface: #fffaf1;
+    --color-surface-strong: #fff4e2;
+    --color-text: #222222;
+    --color-muted: rgba(34, 34, 34, 0.68);
+    --shadow-soft: 0 18px 36px rgba(34, 34, 34, 0.14);
+    --ring: 0 0 0 3px rgba(76, 145, 161, 0.3);
+    --lvl-emerg: #b33b3b;
+    --lvl-watch: #ffb100;
+    --lvl-advice: #4c91a1;
+    --lvl-unk: rgba(34, 34, 34, 0.45);
   }
-  html,body{height:100%}
-  body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
-  header{padding:12px 16px;background:#0d141f;border-bottom:1px solid var(--b)}
-  main{display:grid;grid-template-columns:360px 1fr;gap:12px;padding:12px}
-  #list{max-height:calc(100vh - 80px);overflow:auto;background:var(--panel);border:1px solid var(--b);border-radius:10px;padding:10px}
-  #map{height:calc(100vh - 80px);border:1px solid var(--b);border-radius:10px;background:#0a0a0a}
-  .muted{color:var(--muted);font-size:12px}
-  .card{padding:10px;border-radius:8px;border:1px solid var(--b);margin-bottom:10px;background:#0b111a;cursor:pointer}
-  .badge{display:inline-block;font-size:11px;padding:2px 6px;border-radius:999px;margin-left:6px}
-  .lvl-emerg{background:var(--lvl-emerg);color:white}
-  .lvl-watch{background:var(--lvl-watch);color:black}
-  .lvl-advice{background:var(--lvl-advice);color:white}
-  .lvl-unk{background:var(--lvl-unk);color:white}
-  .legend{position:absolute;right:16px;top:92px;background:rgba(13,20,31,.9);padding:8px 10px;border:1px solid var(--b);border-radius:8px}
-  .legend div{display:flex;align-items:center;gap:8px;margin:4px 0}
-  .swatch{width:14px;height:14px;border-radius:3px;border:1px solid #0003}
-  .srch{display:flex;gap:8px;margin-bottom:10px}
-  .srch input{flex:1;padding:8px;border-radius:8px;border:1px solid var(--b);background:#0b111a;color:var(--fg)}
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--color-sand);
+    color: var(--color-text);
+    font-family: 'Noto Sans', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    position: relative;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+  }
+
+  .page-background {
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background: radial-gradient(circle at 12% 18%, rgba(232, 126, 63, 0.18), transparent 55%),
+      radial-gradient(circle at 80% 10%, rgba(76, 145, 161, 0.18), transparent 60%),
+      radial-gradient(circle at 8% 88%, rgba(90, 181, 106, 0.18), transparent 55%),
+      var(--color-sand);
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+    background: rgba(242, 230, 208, 0.92);
+    border-bottom: 1px solid rgba(34, 34, 34, 0.08);
+  }
+
+  .header-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  .brand-lockup {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .brand-mark {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(140deg, rgba(58, 105, 84, 0.18), rgba(76, 145, 161, 0.18));
+    border: 2px solid rgba(58, 105, 84, 0.35);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    padding: 12px;
+  }
+
+  .brand-mark img {
+    width: 100%;
+    height: auto;
+  }
+
+  .brand-copy {
+    display: grid;
+    gap: 2px;
+  }
+
+  .brand-overline {
+    margin: 0;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(34, 34, 34, 0.56);
+  }
+
+  .brand-title {
+    margin: 0;
+    font-family: 'Inter', 'Noto Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .pill-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    color: #ffffff;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 10px 24px rgba(34, 34, 34, 0.16);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  }
+
+  .pill-button:hover,
+  .pill-button:focus-visible {
+    transform: translateY(-1px);
+    background: var(--color-primary-dark);
+    box-shadow: 0 14px 28px rgba(34, 34, 34, 0.2);
+  }
+
+  main {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 36px 24px 56px;
+    display: grid;
+    gap: 32px;
+  }
+
+  .hero-card {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 244, 226, 0.95));
+    border-radius: 28px;
+    border: 1px solid rgba(34, 34, 34, 0.08);
+    padding: 28px;
+    box-shadow: var(--shadow-soft);
+    display: grid;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-card::after {
+    content: "";
+    position: absolute;
+    inset: -30% 40% -40% -20%;
+    background: radial-gradient(circle at 30% 30%, rgba(232, 126, 63, 0.18), transparent 60%);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-size: 0.85rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(34, 34, 34, 0.55);
+    font-weight: 600;
+  }
+
+  .hero-title {
+    margin: 0;
+    font-size: clamp(1.8rem, 3vw, 2.3rem);
+    font-family: 'Inter', 'Noto Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+
+  .hero-body {
+    margin: 0;
+    color: var(--color-muted);
+    max-width: 620px;
+  }
+
+  .layout {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: 340px 1fr;
+    align-items: start;
+  }
+
+  #list {
+    background: var(--color-surface);
+    border: 1px solid rgba(34, 34, 34, 0.08);
+    border-radius: 24px;
+    padding: 20px;
+    box-shadow: var(--shadow-soft);
+    display: grid;
+    gap: 16px;
+    max-height: calc(100vh - 140px);
+    overflow: auto;
+  }
+
+  .srch {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .srch input {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(34, 34, 34, 0.12);
+    background: var(--color-surface-strong);
+    color: var(--color-text);
+    font-size: 0.95rem;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .srch input:hover {
+    border-color: rgba(232, 126, 63, 0.5);
+  }
+
+  .muted {
+    color: var(--color-muted);
+    font-size: 0.85rem;
+  }
+
+  #cards {
+    display: grid;
+    gap: 12px;
+  }
+
+  .card {
+    border-radius: 16px;
+    border: 1px solid rgba(34, 34, 34, 0.08);
+    padding: 14px 16px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 244, 226, 0.98));
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(232, 126, 63, 0.6);
+    box-shadow: 0 12px 24px rgba(34, 34, 34, 0.16);
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .badge.lvl-emerg { background: var(--lvl-emerg); color: #ffffff; }
+  .badge.lvl-watch { background: var(--lvl-watch); color: #222222; }
+  .badge.lvl-advice { background: var(--lvl-advice); color: #ffffff; }
+  .badge.lvl-unk { background: rgba(34, 34, 34, 0.15); color: #222222; }
+
+  #map {
+    height: calc(100vh - 140px);
+    border-radius: 28px;
+    border: 1px solid rgba(34, 34, 34, 0.08);
+    overflow: hidden;
+    box-shadow: var(--shadow-soft);
+    min-height: 420px;
+  }
+
+  .legend {
+    position: absolute;
+    right: 24px;
+    top: 118px;
+    background: rgba(255, 250, 241, 0.94);
+    border: 1px solid rgba(34, 34, 34, 0.12);
+    border-radius: 16px;
+    box-shadow: 0 12px 24px rgba(34, 34, 34, 0.12);
+    padding: 12px 16px;
+    font-size: 0.85rem;
+    color: var(--color-text);
+    display: grid;
+    gap: 6px;
+  }
+
+  .legend div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(34, 34, 34, 0.15);
+  }
+
+  footer {
+    padding: 0 24px 48px;
+    text-align: center;
+    color: rgba(34, 34, 34, 0.6);
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 960px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    #map {
+      order: -1;
+      height: 420px;
+    }
+
+    .legend {
+      position: static;
+      margin: 0 auto;
+      width: fit-content;
+    }
+
+    #list {
+      max-height: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .header-inner {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    main {
+      padding: 28px 16px 48px;
+    }
+
+    .hero-card {
+      padding: 22px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1 style="margin:0; font-size:18px">QLD Bushfire Incidents (local cache)</h1>
-  <div class="muted">Refresh ~30 min when Pi has internet; still works offline with last-known-good copy.</div>
-</header>
-<main>
-  <section id="list">
-    <div class="srch">
-      <input id="q" placeholder="Filter by place/title/status…" />
+<div class="page-background" aria-hidden="true"></div>
+<header class="site-header">
+  <div class="header-inner">
+    <div class="brand-lockup">
+      <div class="brand-mark">
+        <img src="/assets/logo/placeholder.svg" alt="Offline Learning Hub placeholder logo" />
+      </div>
+      <div class="brand-copy">
+        <p class="brand-overline">Offline Learning Hub</p>
+        <p class="brand-title">QLD Bushfire Incidents</p>
+      </div>
     </div>
-    <div id="meta" class="muted">Loading…</div>
-    <div id="cards"></div>
+    <nav>
+      <a class="pill-button" href="/" aria-label="Back to the Offline Learning Hub home">← Back to Hub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero-card">
+    <p class="hero-eyebrow">Safety snapshot</p>
+    <h1 class="hero-title">Live bushfire warnings cached for the Mount Perry node.</h1>
+    <p class="hero-body">This dashboard mirrors the Queensland Fire Department feed whenever the hub syncs, so our community can stay prepared even when the wider internet is offline. Filter the list to find nearby advice, then tap a card to focus the map.</p>
   </section>
-  <section id="map"></section>
+
+  <section class="layout">
+    <div id="list">
+      <div class="srch">
+        <input id="q" placeholder="Filter by place, title, or status" />
+      </div>
+      <div id="meta" class="muted">Loading…</div>
+      <div id="cards"></div>
+    </div>
+    <div style="position: relative;">
+      <div id="map"></div>
+      <div class="legend">
+        <div><span class="swatch" style="background: var(--lvl-emerg);"></span> Emergency Warning</div>
+        <div><span class="swatch" style="background: var(--lvl-watch);"></span> Watch and Act</div>
+        <div><span class="swatch" style="background: var(--lvl-advice);"></span> Advice</div>
+        <div><span class="swatch" style="background: rgba(34, 34, 34, 0.15);"></span> Unknown</div>
+      </div>
+    </div>
+  </section>
 </main>
 
-<div class="legend">
-  <div><span class="swatch" style="background:var(--lvl-emerg)"></span> Emergency Warning</div>
-  <div><span class="swatch" style="background:var(--lvl-watch)"></span> Watch and Act</div>
-  <div><span class="swatch" style="background:var(--lvl-advice)"></span> Advice</div>
-  <div><span class="swatch" style="background:var(--lvl-unk)"></span> Unknown</div>
-</div>
+<footer>
+  Data refreshed when the node is online · Queensland Fire Department feed (cached locally)
+</footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -126,7 +488,7 @@ function makeLayer(data) {
   geoLayer = L.geoJSON(data, {
     style: (f) => {
       const c = lvlColor(f.properties?.WarningLevel || f.properties?.WarningType_Level);
-      return { color: c, weight: 2, fillColor: c, fillOpacity: 0.15 };
+      return { color: c, weight: 2, fillColor: c, fillOpacity: 0.18 };
     },
     pointToLayer: (f, latlng) => {
       const c = lvlColor(f.properties?.WarningLevel || f.properties?.WarningType_Level);
@@ -139,7 +501,6 @@ function makeLayer(data) {
     }
   }).addTo(map);
 
-  // Fit bounds if we have any geometry
   try {
     const b = geoLayer.getBounds();
     if (b.isValid()) map.fitBounds(b.pad(0.1));
@@ -148,7 +509,6 @@ function makeLayer(data) {
 
 function renderList(items) {
   CARDS.innerHTML = items.map((f, idx) => cardHtml(f.properties||{}, idx)).join('');
-  // focus on map when a card is clicked
   CARDS.querySelectorAll('.card').forEach((el) => {
     el.addEventListener('click', () => {
       const idx = parseInt(el.getAttribute('data-idx'), 10);
@@ -171,7 +531,7 @@ function applyFilter() {
     makeLayer({ type: "FeatureCollection", features });
     renderList(features);
     return;
-    }
+  }
   const filtered = [];
   for (let i=0;i<features.length;i++) {
     const f = features[i];
@@ -200,7 +560,10 @@ async function load() {
   renderList(features);
 }
 
-QUERY.addEventListener('input', () => applyFilter());
+QUERY.addEventListener('input', () => {
+  applyFilter();
+});
+
 load();
 </script>
 </body>

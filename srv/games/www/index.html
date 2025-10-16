@@ -2,353 +2,545 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>LAN Arcade</title>
+  <title>LAN Arcade — Offline Learning Hub</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root{
-      --bg:#0a0f22;
-      --bg2:#0e1533;
-      --card:#12182a;
-      --stroke:#1e2544;
-      --accent:#3b82f6;
-      --accent-2:#8b5cf6;
-      --muted:#9aa4b2;
-      --fg:#e6e9ef;
-      --glass:rgba(255,255,255,0.06);
-      --ring:rgba(59,130,246,.55);
+    :root {
+      color-scheme: light;
+      --color-primary: #3a6954;
+      --color-primary-dark: #29503f;
+      --color-accent: #e87e3f;
+      --color-secondary: #4c91a1;
+      --color-sand: #f2e6d0;
+      --color-sand-soft: #fff4e2;
+      --color-surface: #fffaf1;
+      --color-text: #222222;
+      --color-muted: rgba(34, 34, 34, 0.68);
+      --shadow-soft: 0 16px 40px rgba(34, 34, 34, 0.12);
+      --ring: 0 0 0 3px rgba(76, 145, 161, 0.3);
+      --hero-image: url('/assets/hero/outback.svg');
+      font-family: 'Noto Sans', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     }
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;color:var(--fg);font:16px/1.6 system-ui,Segoe UI,Helvetica,Arial,sans-serif;
-      background:
-        radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,.18), transparent 60%),
-        radial-gradient(1000px 600px at 110% 20%, rgba(139,92,246,.16), transparent 60%),
-        linear-gradient(180deg, var(--bg), var(--bg2));
-      background-attachment: fixed;
-      overflow-y:auto;
+    * {
+      box-sizing: border-box;
     }
 
-    header{
-      padding:.9rem 1rem;border-bottom:1px solid var(--stroke);
-      position:sticky;top:0;backdrop-filter:saturate(140%) blur(6px);
-      background:
-        linear-gradient(to right, rgba(16,22,38,.65), rgba(16,22,38,.35)),
-        radial-gradient(60% 120% at 50% -20%, rgba(59,130,246,.18), transparent 60%);
-      z-index:10;animation: drop-in .5s ease-out both;
-    }
-    .header-inner{max-width:1150px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
-    .brand{font-weight:800;letter-spacing:.02em}
-    .btn{
-      display:inline-flex;align-items:center;gap:.5rem;
-      padding:.5rem .85rem;border-radius:999px;
-      background:linear-gradient(180deg, rgba(20,26,42,.95), rgba(20,26,42,.82));
-      border:1px solid color-mix(in srgb, var(--stroke) 75%, transparent);
-      color:var(--fg);text-decoration:none;font-weight:700;
-      transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-    }
-    .btn:hover,.btn:focus-visible{
-      transform:translateY(-1px);border-color:var(--accent);
-      box-shadow:0 10px 24px rgba(0,0,0,.25), 0 0 0 2px var(--ring);
-      outline:none;
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--color-sand);
+      color: var(--color-text);
+      font: 16px/1.6 var(--font-body, 'Noto Sans', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      position: relative;
     }
 
-    .wrap{padding:1.25rem;max-width:1150px;margin:0 auto;animation: fade-up .6s .08s both}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+    a {
+      color: inherit;
+    }
 
-    a.card{
-      display:block;padding:1rem;background:
-        linear-gradient(180deg, rgba(20,26,42,.95), rgba(20,26,42,.82));
-      border:1px solid color-mix(in srgb, var(--stroke) 75%, transparent);
-      border-radius:16px;text-decoration:none;color:inherit;
-      position:relative;isolation:isolate;
-      transition:
-        transform .18s ease, border-color .18s ease,
-        box-shadow .18s ease, background .18s ease, filter .18s ease;
-      box-shadow: 0 0 0 rgba(0,0,0,0);
+    a:focus-visible {
       outline: none;
-      will-change: transform, box-shadow;
-    }
-    a.card:hover, a.card:focus-visible{
-      transform:translateY(-5px);
-      border-color:var(--accent);
-      box-shadow:
-        0 14px 30px rgba(0,0,0,.35),
-        0 0 0 1px rgba(59,130,246,.25) inset;
-      background:linear-gradient(180deg, rgba(20,26,42,.98), rgba(20,26,42,.85));
-      filter: saturate(1.05);
-    }
-    a.card:focus-visible{
-      box-shadow:
-        0 14px 30px rgba(0,0,0,.35),
-        0 0 0 3px var(--ring);
+      box-shadow: var(--ring);
+      border-radius: 12px;
     }
 
-    /* subtle moving sheen */
-    a.card::after{
-      content:""; position:absolute; inset:0; border-radius:16px; pointer-events:none;
-      background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,.06) 45%, transparent 60%);
-      transform: translateX(-120%);
-      transition: transform .6s ease;
-      mix-blend-mode: screen;
-    }
-    a.card:hover::after{ transform: translateX(0%); }
-
-    .thumb{
-      height:120px;border-radius:12px;background:
-        radial-gradient(90% 70% at 20% 10%, rgba(59,130,246,.12), transparent 40%),
-        linear-gradient(160deg,rgba(14,20,40,.92),rgba(14,20,40,.75));
-      display:flex;align-items:center;justify-content:center;margin-bottom:.75rem;font-weight:800;color:var(--muted);
-      position:relative;overflow:hidden; letter-spacing:.3px;
-      text-transform:capitalize;
-    }
-    .thumb .badge{
-      position:absolute;top:10px;right:10px;font-size:.82rem;color:#cbd5e1;background:var(--glass);
-      border:1px solid var(--stroke);padding:.15rem .5rem;border-radius:999px
+    .page-background {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 12% 18%, rgba(232, 126, 63, 0.18), transparent 55%),
+        radial-gradient(circle at 80% 12%, rgba(76, 145, 161, 0.18), transparent 60%),
+        radial-gradient(circle at 8% 88%, rgba(90, 181, 106, 0.18), transparent 55%),
+        var(--color-sand);
+      z-index: -2;
     }
 
-    .name{font-weight:900;margin-bottom:.25rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .path{font-size:.9rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    .section{
-      margin:.5rem 0 1rem;color:var(--muted);font-size:.95rem;display:flex;align-items:center;gap:.5rem;
-      text-transform:uppercase;letter-spacing:.08em;font-weight:700
-    }
-    .section .dot{
-      width:8px;height:8px;border-radius:50%;
-      background: radial-gradient(circle at 30% 30%, var(--accent), var(--accent-2));
-      box-shadow: 0 0 12px rgba(59,130,246,.7);
-      animation: pulse 2.2s ease-in-out infinite;
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+      background: rgba(242, 230, 208, 0.92);
+      border-bottom: 1px solid rgba(34, 34, 34, 0.08);
     }
 
-    /* entry animation for cards */
-    .grid a.card{opacity:0;animation: rise .45s ease forwards}
-    .grid a.card:nth-child(1){animation-delay:.06s}
-    .grid a.card:nth-child(2){animation-delay:.12s}
-    .grid a.card:nth-child(3){animation-delay:.18s}
-    .grid a.card:nth-child(4){animation-delay:.24s}
-    .grid a.card:nth-child(5){animation-delay:.30s}
-    .grid a.card:nth-child(6){animation-delay:.36s}
-    .grid a.card:nth-child(7){animation-delay:.42s}
-    .grid a.card:nth-child(8){animation-delay:.48s}
-    .grid a.card:nth-child(9){animation-delay:.54s}
-    .grid a.card:nth-child(10){animation-delay:.60s}
-
-    @keyframes rise{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}
-    @keyframes drop-in{from{transform:translateY(-10px);opacity:.0}to{transform:translateY(0);opacity:1}}
-    @keyframes fade-up{from{transform:translateY(8px);opacity:.0}to{transform:translateY(0);opacity:1}}
-    @keyframes pulse{
-      0%,100%{filter:drop-shadow(0 0 0 rgba(59,130,246,0))}
-      50%{filter:drop-shadow(0 0 10px rgba(139,92,246,.6))}
+    .header-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
     }
 
-    footer{
-      margin:2rem auto 1.25rem;max-width:1150px;padding:0 1.25rem;color:var(--muted);font-size:.9rem;
-      text-align:center;opacity:.9
-    }
-    .glow{
-      height:1px;margin:1.25rem auto;
-      background: linear-gradient(90deg, transparent, rgba(59,130,246,.4), rgba(139,92,246,.35), transparent);
-      filter: blur(.4px);
-    }
-    .muted{color:var(--muted)}
-
-    /* motion sensitivity */
-    @media (prefers-reduced-motion: reduce){
-      *{animation:none !important; transition:none !important}
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 16px;
     }
 
-    @media (max-width:420px){ .thumb{height:100px} }
+    .brand-mark {
+      width: 56px;
+      height: 56px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(140deg, rgba(58, 105, 84, 0.18), rgba(76, 145, 161, 0.18));
+      border: 2px solid rgba(58, 105, 84, 0.35);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      padding: 12px;
+    }
+
+    .brand-mark img {
+      width: 100%;
+      height: auto;
+    }
+
+    .brand-copy {
+      display: grid;
+      gap: 2px;
+    }
+
+    .brand-overline {
+      margin: 0;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(34, 34, 34, 0.56);
+    }
+
+    .brand-title {
+      margin: 0;
+      font-family: 'Inter', 'Noto Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      font-weight: 700;
+      font-size: 1.35rem;
+      color: var(--color-primary);
+    }
+
+    .pill-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-radius: 999px;
+      background: var(--color-primary);
+      color: #ffffff;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 10px 24px rgba(34, 34, 34, 0.16);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    .pill-button:hover,
+    .pill-button:focus-visible {
+      transform: translateY(-1px);
+      background: var(--color-primary-dark);
+      box-shadow: 0 14px 28px rgba(34, 34, 34, 0.2);
+    }
+
+    main {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+      display: grid;
+      gap: 48px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 32px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      align-items: center;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 244, 226, 0.9));
+      border: 1px solid rgba(34, 34, 34, 0.08);
+      border-radius: 32px;
+      padding: 32px;
+      box-shadow: var(--shadow-soft);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: var(--hero-image);
+      background-repeat: no-repeat;
+      background-size: 420px auto;
+      background-position: right -40px bottom -30px;
+      opacity: 0.22;
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 12px;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.85rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(34, 34, 34, 0.55);
+      font-weight: 600;
+    }
+
+    .hero-title {
+      margin: 0;
+      font-family: 'Inter', 'Noto Sans', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      font-size: clamp(1.9rem, 3vw, 2.4rem);
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    .hero-lede {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--color-muted);
+      max-width: 520px;
+    }
+
+    .card-section {
+      display: grid;
+      gap: 16px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--color-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .section-header .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, var(--color-secondary), var(--color-accent));
+      box-shadow: 0 0 12px rgba(232, 126, 63, 0.4);
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    a.card {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      text-decoration: none;
+      color: inherit;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 244, 226, 0.98));
+      border-radius: 20px;
+      border: 1px solid rgba(34, 34, 34, 0.08);
+      box-shadow: 0 10px 24px rgba(34, 34, 34, 0.08);
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    }
+
+    a.card:hover,
+    a.card:focus-visible {
+      transform: translateY(-6px);
+      border-color: rgba(232, 126, 63, 0.6);
+      box-shadow: 0 16px 32px rgba(34, 34, 34, 0.16);
+    }
+
+    .thumb {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-weight: 700;
+      color: var(--color-primary);
+      font-size: 1.05rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+      background: var(--color-secondary);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    }
+
+    .name {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--color-text);
+    }
+
+    .path {
+      font-family: 'IBM Plex Mono', 'Courier New', Courier, monospace;
+      font-size: 0.85rem;
+      color: rgba(34, 34, 34, 0.58);
+      letter-spacing: 0.02em;
+    }
+
+    footer {
+      padding: 32px 24px 48px;
+      text-align: center;
+      color: rgba(34, 34, 34, 0.58);
+      font-size: 0.9rem;
+    }
+
+    .muted {
+      color: rgba(34, 34, 34, 0.58);
+    }
+
+    @media (max-width: 640px) {
+      .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .hero {
+        padding: 26px;
+      }
+
+      .hero::after {
+        background-size: 320px auto;
+        background-position: right -60px bottom -60px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <header>
+  <div class="page-background" aria-hidden="true"></div>
+  <header class="site-header">
     <div class="header-inner">
-      <div class="brand">🎮 LAN Arcade</div>
+      <div class="brand-lockup">
+        <div class="brand-mark">
+          <img src="/assets/logo/placeholder.svg" alt="Offline Learning Hub placeholder logo" />
+        </div>
+        <div class="brand-copy">
+          <p class="brand-overline">Offline Learning Hub</p>
+          <p class="brand-title">LAN Arcade</p>
+        </div>
+      </div>
       <nav>
-        <a class="btn" href="http://library.local" target="_blank" rel="noopener">📚 Library</a>
+        <a class="pill-button" href="/" aria-label="Back to the Offline Learning Hub home">← Back to Hub</a>
       </nav>
     </div>
   </header>
 
-  <div class="wrap">
+  <main>
+    <section class="hero">
+      <div class="hero-content">
+        <p class="hero-eyebrow">Local fun for every node</p>
+        <h1 class="hero-title">Play, learn, and experiment — even when you&rsquo;re offline.</h1>
+        <p class="hero-lede">These games are cached locally on the node so young people can practise problem solving, coordination, and creativity without needing the wider internet.</p>
+      </div>
+    </section>
 
-    <div class="section"><span class="dot"></span>Top-level games</div>
-    <div class="grid">
-      <a class="card" href="/games/2048/">
-        <div class="thumb"><span class="badge">Arcade</span>2048</div>
-        <div class="name">2048</div>
-        <div class="path">/games/2048/</div>
-      </a>
-      <a class="card" href="/games/hextris/">
-        <div class="thumb"><span class="badge">Arcade</span>hextris</div>
-        <div class="name">hextris</div>
-        <div class="path">/games/hextris/</div>
-      </a>
-      <a class="card" href="/games/chromashift/">
-        <div class="thumb"><span class="badge">Arcade</span>chromashift</div>
-        <div class="name">Chromashift</div>
-        <div class="path">/games/chromashift/</div>
-      </a>
-      <a class="card" href="/games/fluxgrid/">
-        <div class="thumb"><span class="badge">Arcade</span>fluxgrid</div>
-        <div class="name">Fluxgrid</div>
-        <div class="path">/games/fluxgrid/</div>
-      </a>
-    </div>
+    <section class="card-section">
+      <div class="section-header"><span class="dot"></span>Top-level games</div>
+      <div class="card-grid">
+        <a class="card" href="/games/2048/">
+          <div class="thumb"><span class="badge">Arcade</span>2048</div>
+          <div class="name">2048</div>
+          <div class="path">/games/2048/</div>
+        </a>
+        <a class="card" href="/games/hextris/">
+          <div class="thumb"><span class="badge">Arcade</span>hextris</div>
+          <div class="name">hextris</div>
+          <div class="path">/games/hextris/</div>
+        </a>
+        <a class="card" href="/games/chromashift/">
+          <div class="thumb"><span class="badge">Arcade</span>chromashift</div>
+          <div class="name">Chromashift</div>
+          <div class="path">/games/chromashift/</div>
+        </a>
+        <a class="card" href="/games/fluxgrid/">
+          <div class="thumb"><span class="badge">Arcade</span>fluxgrid</div>
+          <div class="name">Fluxgrid</div>
+          <div class="path">/games/fluxgrid/</div>
+        </a>
+      </div>
+    </section>
 
-    <div class="section" style="margin-top:2rem"><span class="dot"></span>TomMalbran pack</div>
-    <div class="grid">
-      <a class="card" href="/games/tommalbran/puzzle/">
-        <div class="thumb"><span class="badge">Puzzle</span>puzzle</div>
-        <div class="name">puzzle</div>
-        <div class="path">/games/tommalbran/puzzle/</div>
-      </a>
-      <a class="card" href="/games/tommalbran/bounce/">
-        <div class="thumb"><span class="badge">Arcade</span>bounce</div>
-        <div class="name">bounce</div>
-        <div class="path">/games/tommalbran/bounce/</div>
-      </a>
-      <a class="card" href="/games/tommalbran/snake/">
-        <div class="thumb"><span class="badge">Classic</span>snake</div>
-        <div class="name">snake</div>
-        <div class="path">/games/tommalbran/snake/</div>
-      </a>
-      <a class="card" href="/games/tommalbran/spider/">
-        <div class="thumb"><span class="badge">Action</span>spider</div>
-        <div class="name">spider</div>
-        <div class="path">/games/tommalbran/spider/</div>
-      </a>
-      <a class="card" href="/games/tommalbran/tetris/">
-        <div class="thumb"><span class="badge">Blocks</span>tetris</div>
-        <div class="name">tetris</div>
-        <div class="path">/games/tommalbran/tetris/</div>
-      </a>
-      <a class="card" href="/games/tommalbran/defender/">
-        <div class="thumb"><span class="badge">Arcade</span>defender</div>
-        <div class="name">defender</div>
-        <div class="path">/games/tommalbran/defender/</div>
-      </a>
-      <a class="card" href="/games/tommalbran/pacman/">
-        <div class="thumb"><span class="badge">Classic</span>pacman</div>
-        <div class="name">pacman</div>
-        <div class="path">/games/tommalbran/pacman/</div>
-      </a>
-    </div>
+    <section class="card-section">
+      <div class="section-header"><span class="dot"></span>TomMalbran pack</div>
+      <div class="card-grid">
+        <a class="card" href="/games/tommalbran/puzzle/">
+          <div class="thumb"><span class="badge">Puzzle</span>puzzle</div>
+          <div class="name">puzzle</div>
+          <div class="path">/games/tommalbran/puzzle/</div>
+        </a>
+        <a class="card" href="/games/tommalbran/bounce/">
+          <div class="thumb"><span class="badge">Arcade</span>bounce</div>
+          <div class="name">bounce</div>
+          <div class="path">/games/tommalbran/bounce/</div>
+        </a>
+        <a class="card" href="/games/tommalbran/snake/">
+          <div class="thumb"><span class="badge">Classic</span>snake</div>
+          <div class="name">snake</div>
+          <div class="path">/games/tommalbran/snake/</div>
+        </a>
+        <a class="card" href="/games/tommalbran/spider/">
+          <div class="thumb"><span class="badge">Action</span>spider</div>
+          <div class="name">spider</div>
+          <div class="path">/games/tommalbran/spider/</div>
+        </a>
+        <a class="card" href="/games/tommalbran/tetris/">
+          <div class="thumb"><span class="badge">Blocks</span>tetris</div>
+          <div class="name">tetris</div>
+          <div class="path">/games/tommalbran/tetris/</div>
+        </a>
+        <a class="card" href="/games/tommalbran/defender/">
+          <div class="thumb"><span class="badge">Arcade</span>defender</div>
+          <div class="name">defender</div>
+          <div class="path">/games/tommalbran/defender/</div>
+        </a>
+        <a class="card" href="/games/tommalbran/pacman/">
+          <div class="thumb"><span class="badge">Classic</span>pacman</div>
+          <div class="name">pacman</div>
+          <div class="path">/games/tommalbran/pacman/</div>
+        </a>
+      </div>
+    </section>
 
-    <div class="section" style="margin-top:2rem"><span class="dot"></span>Board &amp; Puzzles</div>
-    <div class="grid">
-      <a class="card" href="/games/chess/">
-        <div class="thumb"><span class="badge">Board</span>♟ Chess</div>
-        <div class="name">Chess</div>
-        <div class="path">/games/chess/</div>
-      </a>
-      <a class="card" href="/games/checkers/">
-        <div class="thumb"><span class="badge">Board</span>⛀ Checkers</div>
-        <div class="name">Checkers</div>
-        <div class="path">/games/checkers/</div>
-      </a>
-      <a class="card" href="/games/nine-mens-morris/malom.html">
-        <div class="thumb"><span class="badge">Board</span>● Nine Men’s Morris</div>
-        <div class="name">Nine Men’s Morris</div>
-        <div class="path">/games/nine-mens-morris/malom.html</div>
-      </a>
-      <a class="card" href="/games/reversi/">
-        <div class="thumb"><span class="badge">Board</span>◐ Reversi</div>
-        <div class="name">Reversi (Othello)</div>
-        <div class="path">/games/reversi/</div>
-      </a>
-      <a class="card" href="/games/connect4/">
-        <div class="thumb"><span class="badge">Board</span>➍ Connect Four</div>
-        <div class="name">Connect Four</div>
-        <div class="path">/games/connect4/</div>
-      </a>
-      <a class="card" href="/games/minesweeper/">
-        <div class="thumb"><span class="badge">Puzzle</span>☀ Minesweeper</div>
-        <div class="name">Minesweeper</div>
-        <div class="path">/games/minesweeper/</div>
-      </a>
-      <a class="card" href="/games/minesweeper-pro/">
-        <div class="thumb"><span class="badge">Puzzle</span>💣 Minesweeper Pro</div>
-        <div class="name">Minesweeper Pro</div>
-        <div class="path">/games/minesweeper-pro/</div>
-      </a>
-      <a class="card" href="/games/sudoku/">
-        <div class="thumb"><span class="badge">Puzzle</span>⑨ Sudoku</div>
-        <div class="name">Sudoku</div>
-        <div class="path">/games/sudoku/</div>
-      </a>
-      <a class="card" href="/games/tetris/">
-        <div class="thumb"><span class="badge">Blocks</span>▧ Tetris</div>
-        <div class="name">Tetris</div>
-        <div class="path">/games/tetris/</div>
-      </a>
-    </div>
+    <section class="card-section">
+      <div class="section-header"><span class="dot"></span>Board &amp; Puzzles</div>
+      <div class="card-grid">
+        <a class="card" href="/games/chess/">
+          <div class="thumb"><span class="badge">Board</span>♟ Chess</div>
+          <div class="name">Chess</div>
+          <div class="path">/games/chess/</div>
+        </a>
+        <a class="card" href="/games/checkers/">
+          <div class="thumb"><span class="badge">Board</span>⛀ Checkers</div>
+          <div class="name">Checkers</div>
+          <div class="path">/games/checkers/</div>
+        </a>
+        <a class="card" href="/games/nine-mens-morris/malom.html">
+          <div class="thumb"><span class="badge">Board</span>● Nine Men’s Morris</div>
+          <div class="name">Nine Men’s Morris</div>
+          <div class="path">/games/nine-mens-morris/malom.html</div>
+        </a>
+        <a class="card" href="/games/reversi/">
+          <div class="thumb"><span class="badge">Board</span>◐ Reversi</div>
+          <div class="name">Reversi (Othello)</div>
+          <div class="path">/games/reversi/</div>
+        </a>
+        <a class="card" href="/games/connect4/">
+          <div class="thumb"><span class="badge">Board</span>➍ Connect Four</div>
+          <div class="name">Connect Four</div>
+          <div class="path">/games/connect4/</div>
+        </a>
+        <a class="card" href="/games/minesweeper/">
+          <div class="thumb"><span class="badge">Puzzle</span>☀ Minesweeper</div>
+          <div class="name">Minesweeper</div>
+          <div class="path">/games/minesweeper/</div>
+        </a>
+        <a class="card" href="/games/minesweeper-pro/">
+          <div class="thumb"><span class="badge">Puzzle</span>💣 Minesweeper Pro</div>
+          <div class="name">Minesweeper Pro</div>
+          <div class="path">/games/minesweeper-pro/</div>
+        </a>
+        <a class="card" href="/games/sudoku/">
+          <div class="thumb"><span class="badge">Puzzle</span>⑨ Sudoku</div>
+          <div class="name">Sudoku</div>
+          <div class="path">/games/sudoku/</div>
+        </a>
+        <a class="card" href="/games/tetris/">
+          <div class="thumb"><span class="badge">Blocks</span>▧ Tetris</div>
+          <div class="name">Tetris</div>
+          <div class="path">/games/tetris/</div>
+        </a>
+      </div>
+    </section>
 
-    <div class="section" style="margin-top:2rem"><span class="dot"></span>Word &amp; Puzzle Games</div>
-    <div class="grid">
-      <a class="card" href="/games/wordsearch-pro/">
-        <div class="thumb"><span class="badge">Word</span>🔎 Word Search Pro</div>
-        <div class="name">Word Search (Offline)</div>
-        <div class="path">/games/wordsearch-pro/</div>
-      </a>
-      <a class="card" href="/games/crossword/">
-        <div class="thumb"><span class="badge">Word</span>🧩 Crossword</div>
-        <div class="name">CrossBuilder (Offline)</div>
-        <div class="path">/games/crossword/</div>
-      </a>
-      <a class="card" href="/games/typinggame/">
-        <div class="thumb"><span class="badge">Typing</span>⌨ Typing Game</div>
-        <div class="name">Typing Trainer</div>
-        <div class="path">/games/typinggame/</div>
-      </a>
-    </div>
+    <section class="card-section">
+      <div class="section-header"><span class="dot"></span>Word &amp; Puzzle Games</div>
+      <div class="card-grid">
+        <a class="card" href="/games/wordsearch-pro/">
+          <div class="thumb"><span class="badge">Word</span>🔎 Word Search Pro</div>
+          <div class="name">Word Search (Offline)</div>
+          <div class="path">/games/wordsearch-pro/</div>
+        </a>
+        <a class="card" href="/games/crossword/">
+          <div class="thumb"><span class="badge">Word</span>🧩 Crossword</div>
+          <div class="name">CrossBuilder (Offline)</div>
+          <div class="path">/games/crossword/</div>
+        </a>
+        <a class="card" href="/games/typinggame/">
+          <div class="thumb"><span class="badge">Typing</span>⌨ Typing Game</div>
+          <div class="name">Typing Trainer</div>
+          <div class="path">/games/typinggame/</div>
+        </a>
+      </div>
+    </section>
 
-    <div class="section" style="margin-top:2rem"><span class="dot"></span>Adventures</div>
-    <div class="grid">
-      <a class="card" href="/games/micro-rogue/">
-        <div class="thumb"><span class="badge">Rogue</span>🗡️ Micro Rogue</div>
-        <div class="name">Micro Rogue (Offline)</div>
-        <div class="path">/games/micro-rogue/</div>
-      </a>
-    </div>
+    <section class="card-section">
+      <div class="section-header"><span class="dot"></span>Adventures</div>
+      <div class="card-grid">
+        <a class="card" href="/games/micro-rogue/">
+          <div class="thumb"><span class="badge">Rogue</span>🗡️ Micro Rogue</div>
+          <div class="name">Micro Rogue (Offline)</div>
+          <div class="path">/games/micro-rogue/</div>
+        </a>
+      </div>
+    </section>
 
-    <div class="section" style="margin-top:2rem"><span class="dot"></span>Experiments &amp; Toys</div>
-    <div class="grid">
-      <a class="card" href="/games/gravity-particle/">
-        <div class="thumb"><span class="badge">Sim</span>🪐 Gravity Particles</div>
-        <div class="name">Gravity Particle</div>
-        <div class="path">/games/gravity-particle/</div>
-      </a>
-    </div>
+    <section class="card-section">
+      <div class="section-header"><span class="dot"></span>Experiments &amp; Toys</div>
+      <div class="card-grid">
+        <a class="card" href="/games/gravity-particle/">
+          <div class="thumb"><span class="badge">Sim</span>🪐 Gravity Particles</div>
+          <div class="name">Gravity Particle</div>
+          <div class="path">/games/gravity-particle/</div>
+        </a>
+      </div>
+    </section>
 
-    <div class="section" style="margin-top:2rem"><span class="dot"></span>Originals &amp; Neon</div>
-    <div class="grid">
-      <a class="card" href="/games/OrbitLoom/">
-        <div class="thumb"><span class="badge">Arcade</span>OrbitLoom</div>
-        <div class="name">OrbitLoom</div>
-        <div class="path">/games/OrbitLoom/</div>
-      </a>
-      <a class="card" href="/games/Jumper-Neon-Skies/">
-        <div class="thumb"><span class="badge">Platformer</span>Jumper-Neon-Skies</div>
-        <div class="name">Jumper-Neon-Skies</div>
-        <div class="path">/games/Jumper-Neon-Skies/</div>
-      </a>
-      <a class="card" href="/games/Tower-Jumper-Neon-Skies/">
-        <div class="thumb"><span class="badge">Platformer</span>Tower-Jumper-Neon-Skies</div>
-        <div class="name">Tower-Jumper-Neon-Skies</div>
-        <div class="path">/games/Tower-Jumper-Neon-Skies/</div>
-      </a>
-      <a class="card" href="/games/space-odyssey/">
-        <div class="thumb"><span class="badge">Arcade</span>🚀 Space Odyssey</div>
-        <div class="name">Space Odyssey</div>
-        <div class="path">/games/space-odyssey/</div>
-      </a>
-    </div>
-
-    <div class="glow"></div>
-  </div>
+    <section class="card-section">
+      <div class="section-header"><span class="dot"></span>Originals &amp; Neon</div>
+      <div class="card-grid">
+        <a class="card" href="/games/OrbitLoom/">
+          <div class="thumb"><span class="badge">Arcade</span>OrbitLoom</div>
+          <div class="name">OrbitLoom</div>
+          <div class="path">/games/OrbitLoom/</div>
+        </a>
+        <a class="card" href="/games/Jumper-Neon-Skies/">
+          <div class="thumb"><span class="badge">Platformer</span>Jumper-Neon-Skies</div>
+          <div class="name">Jumper-Neon-Skies</div>
+          <div class="path">/games/Jumper-Neon-Skies/</div>
+        </a>
+        <a class="card" href="/games/Tower-Jumper-Neon-Skies/">
+          <div class="thumb"><span class="badge">Platformer</span>Tower-Jumper-Neon-Skies</div>
+          <div class="name">Tower-Jumper-Neon-Skies</div>
+          <div class="path">/games/Tower-Jumper-Neon-Skies/</div>
+        </a>
+        <a class="card" href="/games/space-odyssey/">
+          <div class="thumb"><span class="badge">Arcade</span>🚀 Space Odyssey</div>
+          <div class="name">Space Odyssey</div>
+          <div class="path">/games/space-odyssey/</div>
+        </a>
+      </div>
+    </section>
+  </main>
 
   <footer>
     LAN Arcade · Local-first fun • <span class="muted">/srv/games/www</span>
