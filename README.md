@@ -49,7 +49,7 @@ The `etc/`, `srv/`, and `var/` directories mirror the expected hierarchy on the 
 
 ## Deploying the Repository
 
-Once the Pi is reachable over SSH, transfer this repository and mirror the filesystem structure.
+Once the Pi is reachable over SSH, stage the repository under the `pi` user's home directory and then copy individual files into place. This avoids wiping unrelated content that may already exist on the device.
 
 ### Option A: Clone via Git on the Pi
 
@@ -59,28 +59,48 @@ ssh pi@<PI_IP>
 mkdir -p ~/src
 cd ~/src
 git clone https://example.com/your/offline-learning-hub.git
-sudo rsync -avh --delete ~/src/offline-learning-hub/etc/ /etc/
-sudo rsync -avh --delete ~/src/offline-learning-hub/srv/ /srv/
-sudo rsync -avh --delete ~/src/offline-learning-hub/var/ /var/
+
+# Ensure target directories exist
+sudo mkdir -p /etc/nginx/sites-available /srv/games/www /var/www/html
+
+# Copy files into place without pruning other content
+sudo cp ~/src/offline-learning-hub/etc/nginx/sites-available/library.conf /etc/nginx/sites-available/
+sudo cp -r ~/src/offline-learning-hub/srv/games/www/. /srv/games/www/
+sudo cp -r ~/src/offline-learning-hub/var/www/html/. /var/www/html/
+
+# Keep reference copies in the pi user's home directory
+mkdir -p ~/offline-learning-hub-config
+cp -r ~/src/offline-learning-hub/config/. ~/offline-learning-hub-config/
 ```
+
+These `cp` commands add or replace only the files provided in this repository. Remove obsolete assets manually if you intend to retire them.
 
 ### Option B: Push from Your Workstation
 
-If you cannot install Git on the Pi (or want a clean push from your development machine), run the following from your workstation once SSH access is available:
+If you prefer to copy files from your workstation, upload them into a staging directory on the Pi with `scp` (or `rsync` **without** `--delete`), then apply them locally:
 
 ```bash
 # From your workstation inside the repository root
-rsync -avh --delete etc/ pi@<PI_IP>:/etc/
-rsync -avh --delete srv/ pi@<PI_IP>:/srv/
-rsync -avh --delete var/ pi@<PI_IP>:/var/
-rsync -avh --delete config/ pi@<PI_IP>:~/offline-learning-hub-config/
+scp -r etc pi@<PI_IP>:~/offline-hub-staging/
+scp -r srv pi@<PI_IP>:~/offline-hub-staging/
+scp -r var pi@<PI_IP>:~/offline-hub-staging/
+scp -r config pi@<PI_IP>:~/offline-hub-staging/
+
+# Finish on the Pi
+ssh pi@<PI_IP>
+sudo mkdir -p /etc/nginx/sites-available /srv/games/www /var/www/html
+sudo cp ~/offline-hub-staging/etc/nginx/sites-available/library.conf /etc/nginx/sites-available/
+sudo cp -r ~/offline-hub-staging/srv/games/www/. /srv/games/www/
+sudo cp -r ~/offline-hub-staging/var/www/html/. /var/www/html/
+mkdir -p ~/offline-learning-hub-config
+cp -r ~/offline-hub-staging/config/. ~/offline-learning-hub-config/
 ```
 
-This copies system paths (`/etc`, `/srv`, `/var`) as well as the raw configuration assets into the Pi user's home directory for reference.
+After confirming the deployment, remove the staging directory (`rm -rf ~/offline-hub-staging`) to reclaim space.
 
 ## Configuring Nginx
 
-1. Copy the primary server block into place (if you followed the `rsync` commands above, this is already done):
+1. Copy the primary server block into place (if you ran the copy steps above, this is already done):
    ```bash
    sudo cp /etc/nginx/sites-available/library.conf /etc/nginx/sites-enabled/library.conf
    sudo rm -f /etc/nginx/sites-enabled/default
@@ -96,7 +116,7 @@ This copies system paths (`/etc`, `/srv`, `/var`) as well as the raw configurati
    sudo nginx -t
    sudo systemctl reload nginx
    ```
-4. Confirm the landing page works by browsing to `http://library.local/` from a client on the same network.
+4. Confirm the landing page works by browsing to `http://library.local/` (or `http://<PI_IP>/` if mDNS is not configured) from a client on the same network.
 
 ## Installing Kiwix Content
 
@@ -142,7 +162,7 @@ Systemd unit files for Kiwix live under `config/kiwix/`.
 
 ## Routine Maintenance
 
-* **Content updates**: Pull the latest repository changes on your workstation, then rerun the `rsync` commands to sync `/srv` and `/var`.
+* **Content updates**: Pull the latest repository changes on your workstation, stage them as above, and reapply the copy steps to refresh `/srv` and `/var/www/html`.
 * **Logs**: Review Nginx logs under `/var/log/nginx/` and system logs with `journalctl -u kiwix-serve@library`.
 * **Backups**: Periodically back up `/srv`, `/var/www/html`, and `/srv/kiwix/data` to external storage.
 
