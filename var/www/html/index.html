@@ -1,128 +1,245 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>library — LAN tools</title>
-  <link rel="stylesheet" href="/lan.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Offline Learning Hub — Mount Perry Node</title>
+  <link rel="stylesheet" href="/lan.css" />
 </head>
 <body>
-  <header class="site-header">
-    <div class="wrap">
-      <h1>library</h1>
-      <p class="tagline">Your local offline-first portal for bushfire & storm warnings, games, and reference.</p>
+  <div class="page-background" aria-hidden="true"></div>
+
+  <header class="site-header" role="banner">
+    <div class="wrap header-inner">
+      <div class="brand-lockup">
+        <div class="brand-mark small" aria-hidden="true">
+          <img data-logo="header" src="/assets/logo/placeholder.svg" alt="" />
+        </div>
+        <div class="brand-copy">
+          <p class="brand-foundation">Rural Connect Foundation</p>
+          <p class="brand-title" data-node-name>Offline Learning Hub — Mount Perry Node</p>
+        </div>
+      </div>
+      <div class="status-group" aria-live="polite">
+        <div class="status-chip" id="qfd-status" data-state="loading">
+          <div class="status-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true"><path d="M13.5 2.5s.5 3-2 5c-1.5 1.3-2 2.5-2 3.8 0 1.7 1.3 3 3 3 2.6 0 4.5-2.3 4.5-5 .2 0-2.9-1.4-5-3.5-6.6zM12.5 14.3c-3 0-5.5-2.3-5.5-5 0-1.1.4-2.2 1-3.1-3 1.7-5 5-5 8.8 0 4.4 3.6 8 8 8s8-3.6 8-8c0-1.8-.6-3.5-1.6-4.9.1 2.8-1.6 6.2-4.9 6.2z"/></svg>
+          </div>
+          <div class="status-text">
+            <span class="status-label">QFD Bushfire</span>
+            <span class="status-note">Checking…</span>
+          </div>
+        </div>
+        <div class="status-chip" id="storms-status" data-state="loading">
+          <div class="status-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true"><path d="M7 18h2l2-3H9l2-3H8l2-3H8a4 4 0 0 0-1 7.874V17a1 1 0 0 0 1 1zm8-12a5 5 0 0 1 4.546 2.916A4 4 0 1 1 17 18h-3l1.2-2H13l1.2-2H12l1.2-2h1.3A5 5 0 0 1 15 6z"/></svg>
+          </div>
+          <div class="status-text">
+            <span class="status-label">Storms &amp; Flood</span>
+            <span class="status-note">Checking…</span>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
-  <main class="wrap portal">
-    <!-- QFD Bushfire Warnings -->
-    <a class="card" href="/qfd/" aria-label="Open QFD Bushfire Warnings">
+  <section class="hero" role="region" aria-labelledby="hero-title">
+    <div class="hero-background" aria-hidden="true"></div>
+    <div class="wrap hero-inner">
+      <div class="hero-logo" aria-hidden="true">
+        <div class="brand-mark large">
+          <img data-logo="hero" src="/assets/logo/placeholder.svg" alt="" />
+        </div>
+      </div>
+      <div class="hero-copy">
+        <h1 id="hero-title" data-node-name>Offline Learning Hub — Mount Perry Node</h1>
+        <p class="hero-tagline" data-tagline>Learn. Play. Stay Connected — Even Offline.</p>
+        <p class="hero-description">
+          Built for rural classrooms and hubs that depend on resilience. Explore cached warnings, local games, and reference tools—all hosted on this node.
+        </p>
+        <div class="hero-actions">
+          <a class="pill-button" href="#services">View services</a>
+          <a class="pill-button secondary" href="/storms/">Check weather</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main id="services" class="wrap portal" role="main">
+    <article class="card">
+      <a class="card-link" href="/qfd/" aria-label="Open QFD Bushfire Warnings"></a>
       <div class="card-icon" aria-hidden="true">
-        <!-- flame icon -->
-        <svg viewBox="0 0 24 24" role="img"><path d="M13.5 2.5s.5 3-2 5c-1.5 1.3-2 2.5-2 3.8 0 1.7 1.3 3 3 3 2.6 0 4.5-2.3 4.5-5.2 0-2.9-1.4-5-3.5-6.6zM12.5 14.3c-3 0-5.5-2.3-5.5-5 0-1.1.4-2.2 1-3.1-3 1.7-5 5-5 8.8 0 4.4 3.6 8 8 8s8-3.6 8-8c0-1.8-.6-3.5-1.6-4.9.1 2.8-1.6 6.2-4.9 6.2z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M13.5 2.5s.5 3-2 5c-1.5 1.3-2 2.5-2 3.8 0 1.7 1.3 3 3 3 2.6 0 4.5-2.3 4.5-5 .2 0-2.9-1.4-5-3.5-6.6zM12.5 14.3c-3 0-5.5-2.3-5.5-5 0-1.1.4-2.2 1-3.1-3 1.7-5 5-5 8.8 0 4.4 3.6 8 8 8s8-3.6 8-8c0-1.8-.6-3.5-1.6-4.9.1 2.8-1.6 6.2-4.9 6.2z"/></svg>
       </div>
       <div class="card-body">
-        <div class="card-title">
-          QFD Bushfire Warnings
-          <span class="tooltip" data-tip="Live warnings cached locally every ~30 minutes. Map shows polygons or points, works offline with last-known-good data.">?</span>
-        </div>
-        <p class="card-sub">Local cache, updates ~30 min. Map + polygons.</p>
-        <div class="badges">
-          <span id="qfd-status" class="badge is-muted">Checking…</span>
+        <h2 class="card-title">QFD Bushfire Warnings</h2>
+        <p class="card-sub">Live cache from Queensland Fire &amp; Emergency Services, updated roughly every 30 minutes.</p>
+        <div class="card-meta">
+          <span class="badge is-muted" data-bind="qfd-status">Checking…</span>
         </div>
       </div>
       <div class="card-cta">Open</div>
-    </a>
+    </article>
 
-    <!-- Storm / Flood / Cyclone Warnings -->
-    <a class="card" href="/storms/" aria-label="Open Storm, Flood and Cyclone Warnings">
+    <article class="card">
+      <a class="card-link" href="/storms/" aria-label="Open Storm, Flood and Cyclone Warnings"></a>
       <div class="card-icon" aria-hidden="true">
-        <!-- storm cloud icon -->
-        <svg viewBox="0 0 24 24" role="img"><path d="M7 18h2l2-3H9l2-3H8l2-3H8a4 4 0 0 0-1 7.874V17a1 1 0 0 0 1 1zm8-12a5 5 0 0 1 4.546 2.916A4 4 0 1 1 17 18h-3l1.2-2H13l1.2-2H12l1.2-2h1.3A5 5 0 0 1 15 6z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M7 18h2l2-3H9l2-3H8l2-3H8a4 4 0 0 0-1 7.874V17a1 1 0 0 0 1 1zm8-12a5 5 0 0 1 4.546 2.916A4 4 0 1 1 17 18h-3l1.2-2H13l1.2-2H12l1.2-2h1.3A5 5 0 0 1 15 6z"/></svg>
       </div>
       <div class="card-body">
-        <div class="card-title">
-          Storm / Flood / Cyclone Warnings
-          <span class="tooltip" data-tip="Severe weather alerts cached locally every ~30 minutes. Polygons/points render on a simple map for offline reference.">?</span>
-        </div>
-        <p class="card-sub">Local cache, updates ~30 min. Map + polygons.</p>
-        <div class="badges">
-          <span id="storms-status" class="badge is-muted">Checking…</span>
+        <h2 class="card-title">Storm, Flood &amp; Cyclone Warnings</h2>
+        <p class="card-sub">Severe weather alerts cached locally with simple offline-friendly mapping.</p>
+        <div class="card-meta">
+          <span class="badge is-muted" data-bind="storms-status">Checking…</span>
         </div>
       </div>
       <div class="card-cta">Open</div>
-    </a>
+    </article>
 
-    <!-- LAN Arcade -->
-    <a class="card" href="/games/" aria-label="Open LAN Arcade">
+    <article class="card">
+      <a class="card-link" href="/games/" aria-label="Open LAN Arcade"></a>
       <div class="card-icon" aria-hidden="true">
-        <!-- gamepad icon -->
-        <svg viewBox="0 0 24 24" role="img"><path d="M6 8c-2.2 0-4 1.8-4 4v2a4 4 0 0 0 4 4h2l2-2h4l2 2h2a4 4 0 0 0 4-4v-2c0-2.2-1.8-4-4-4H6zm1 2h2v2h2v2H9v2H7v-2H5v-2h2v-2zM16.5 12a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm2.5-1a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M6 8c-2.2 0-4 1.8-4 4v2a4 4 0 0 0 4 4h2l2-2h4l2 2h2a4 4 0 0 0 4-4v-2c0-2.2-1.8-4-4-4H6zm1 2h2v2h2v2H9v2H7v-2H5v-2h2v-2zM16.5 12a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm2.5-1a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
       </div>
       <div class="card-body">
-        <div class="card-title">
-          LAN Arcade
-          <span class="tooltip" data-tip="A friendly index of locally hosted games on this Raspberry Pi. All on your LAN.">?</span>
-        </div>
-        <p class="card-sub">Games hosted on this Pi.</p>
+        <h2 class="card-title">LAN Arcade</h2>
+        <p class="card-sub">A curated collection of local games for downtime, STEM activities, and play.</p>
       </div>
       <div class="card-cta">Play</div>
-    </a>
+    </article>
 
-    <!-- Kiwix Library -->
-    <a class="card" href="http://library.local:8080/" aria-label="Open Kiwix Library">
+    <article class="card">
+      <a class="card-link" href="http://library.local:8080/" aria-label="Open Kiwix Library"></a>
       <div class="card-icon" aria-hidden="true">
-        <!-- book icon -->
-        <svg viewBox="0 0 24 24" role="img"><path d="M5 3h9a3 3 0 0 1 3 3v12a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h9V6a1 1 0 0 0-1-1H5z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M5 3h9a3 3 0 0 1 3 3v12a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm0 2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h9V6a1 1 0 0 0-1-1H5z"/></svg>
       </div>
       <div class="card-body">
-        <div class="card-title">
-          Kiwix Library
-          <span class="tooltip" data-tip="Offline Wikipedia and curated reference content through Kiwix. Fast, local, and private.">?</span>
-        </div>
-        <p class="card-sub">Offline reference via Kiwix.</p>
+        <h2 class="card-title">Kiwix Library</h2>
+        <p class="card-sub">Offline Wikipedia and curated references hosted directly on this device.</p>
       </div>
       <div class="card-cta">Browse</div>
-    </a>
+    </article>
   </main>
 
+  <section class="info-band" role="contentinfo">
+    <div class="wrap info-inner">
+      <div>
+        <h3>Resilience first</h3>
+        <p>All services are cached locally. When the network drops, learners still have what they need. Updates resume automatically when connectivity returns.</p>
+      </div>
+      <div>
+        <h3>Need to personalise?</h3>
+        <p>Set environment variables for the node name, hero artwork, and logo to match your community branding.</p>
+      </div>
+    </div>
+  </section>
+
   <footer class="wrap site-footer">
-    <div class="muted">Local services run on your Raspberry Pi. If a section looks stale, the Pi may be offline; data views keep the last-known-good copy.</div>
+    <p class="footer-note">&copy; <span data-year></span> Rural Connect Foundation. Built for community nodes across Queensland.</p>
   </footer>
 
   <script>
-    // Progressive enhancement: read local status.json for “last updated” chips (no external calls).
-    (async function () {
+    const defaults = {
+      nodeName: 'Offline Learning Hub — Mount Perry Node',
+      heroImage: '/assets/hero/outback.svg',
+      logo: '/assets/logo/placeholder.svg',
+      tagline: 'Learn. Play. Stay Connected — Even Offline.'
+    };
+
+    const getString = (value, fallback) => {
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed.length > 0) {
+          return trimmed;
+        }
+      }
+      return fallback;
+    };
+
+    function applyConfig(config) {
+      const title = getString(config.nodeName, defaults.nodeName);
+      document.title = title;
+      document.querySelectorAll('[data-node-name]').forEach((el) => {
+        el.textContent = title;
+      });
+      const tagline = getString(config.tagline, defaults.tagline);
+      const taglineEl = document.querySelector('[data-tagline]');
+      if (taglineEl) taglineEl.textContent = tagline;
+      const hero = document.querySelector('.hero-background');
+      const image = getString(config.heroImage, defaults.heroImage);
+      if (hero) {
+        hero.style.setProperty('--hero-image-url', `url('${image}')`);
+      }
+      document.querySelectorAll('img[data-logo]').forEach((img) => {
+        img.src = getString(config.logo, defaults.logo);
+      });
+    }
+
+    function setStatus(id, state, note) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const noteEl = el.querySelector('.status-note');
+      const badge = document.querySelector(`.badge[data-bind="${id}"]`);
+      const text = note || (state === 'ok' ? 'Updated' : state === 'error' ? 'Fetch failed' : 'Checking…');
+      if (noteEl) noteEl.textContent = text;
+      if (badge) {
+        badge.textContent = text;
+        badge.classList.remove('is-good', 'is-warn', 'is-muted');
+        if (state === 'ok') badge.classList.add('is-good');
+        else if (state === 'error') badge.classList.add('is-warn');
+        else badge.classList.add('is-muted');
+      }
+      el.dataset.state = state || 'unknown';
+    }
+
+    (async function init() {
+      // window.__OLH_ENV__ can be injected by environment tooling (e.g. envsubst) before this script runs.
+      const envConfig = window.__OLH_ENV__ || {};
+      let fileConfig = {};
+      try {
+        const res = await fetch('/olh-config.json', { cache: 'no-store' });
+        if (res.ok) {
+          fileConfig = await res.json();
+        }
+      } catch (err) {
+        console.warn('Config fetch failed', err);
+      }
+      applyConfig({ ...defaults, ...fileConfig, ...envConfig });
+
+      const yearEl = document.querySelector('[data-year]');
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+
       const fmt = (iso) => {
         try {
           const d = new Date(iso);
-          return isNaN(d) ? null : d.toLocaleString();
-        } catch { return null; }
-      };
-      const set = (id, ok, note, ts) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (ok === true) {
-          el.className = 'badge is-good';
-          el.textContent = ts ? `Updated: ${ts}` : (note || 'OK');
-        } else if (ok === false) {
-          el.className = 'badge is-warn';
-          el.textContent = 'Fetch failed';
-        } else {
-          el.className = 'badge is-muted';
-          el.textContent = 'Unknown';
+          return Number.isNaN(d.getTime()) ? null : d.toLocaleString();
+        } catch (error) {
+          return null;
         }
       };
+
       try {
-        const qfd = await fetch('/qfd/status.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
-        set('qfd-status', qfd?.ok, qfd?.note, fmt(qfd?.fetched_at_utc));
-      } catch { set('qfd-status'); }
+        const qfd = await fetch('/qfd/status.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null));
+        if (qfd) {
+          setStatus('qfd-status', qfd.ok ? 'ok' : 'error', qfd.ok ? (qfd.fetched_at_utc ? `Updated: ${fmt(qfd.fetched_at_utc)}` : qfd.note || 'OK') : 'Fetch failed');
+        } else {
+          setStatus('qfd-status', 'unknown', 'Unknown');
+        }
+      } catch (error) {
+        setStatus('qfd-status', 'unknown', 'Unknown');
+      }
+
       try {
-        const st = await fetch('/storms/status.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : null);
-        set('storms-status', st?.ok, st?.note, fmt(st?.fetched_at_utc));
-      } catch { set('storms-status'); }
+        const storms = await fetch('/storms/status.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null));
+        if (storms) {
+          setStatus('storms-status', storms.ok ? 'ok' : 'error', storms.ok ? (storms.fetched_at_utc ? `Updated: ${fmt(storms.fetched_at_utc)}` : storms.note || 'OK') : 'Fetch failed');
+        } else {
+          setStatus('storms-status', 'unknown', 'Unknown');
+        }
+      } catch (error) {
+        setStatus('storms-status', 'unknown', 'Unknown');
+      }
     })();
   </script>
 </body>
 </html>
-

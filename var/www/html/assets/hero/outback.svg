@@ -1,0 +1,40 @@
+<svg width="1440" height="720" viewBox="0 0 1440 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="heroTitle heroDesc">
+  <title id="heroTitle">Mount Perry landscape illustration</title>
+  <desc id="heroDesc">Layered hills, gum leaves, and a warm sky inspired by regional Queensland.</desc>
+  <defs>
+    <linearGradient id="skyGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F7E7C6"/>
+      <stop offset="45%" stop-color="#F2D8B0"/>
+      <stop offset="100%" stop-color="#EBC093"/>
+    </linearGradient>
+    <linearGradient id="sunGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FFCD73"/>
+      <stop offset="100%" stop-color="#FFB100"/>
+    </linearGradient>
+    <linearGradient id="ridgeA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4C91A1"/>
+      <stop offset="100%" stop-color="#3A6954"/>
+    </linearGradient>
+    <linearGradient id="ridgeB" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#3F7A63"/>
+      <stop offset="100%" stop-color="#29503F"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#D87036"/>
+      <stop offset="100%" stop-color="#E87E3F"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#4C91A1"/>
+      <stop offset="100%" stop-color="#3A6954"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="720" fill="url(#skyGradient)"/>
+  <circle cx="1120" cy="200" r="120" fill="url(#sunGradient)" opacity="0.8"/>
+  <path d="M0 460C160 400 320 420 480 360C640 300 760 340 900 380C1060 430 1200 420 1440 360V720H0V460Z" fill="url(#ridgeA)" opacity="0.9"/>
+  <path d="M0 520C200 470 420 500 620 450C840 392 1030 470 1180 500C1300 524 1380 516 1440 500V720H0V520Z" fill="url(#ridgeB)" opacity="0.82"/>
+  <path d="M0 580C200 550 420 620 620 600C840 576 1100 630 1280 600C1350 588 1400 572 1440 560V720H0V580Z" fill="url(#ground)" opacity="0.9"/>
+  <g opacity="0.85">
+    <path d="M140 520C120 460 120 420 180 360C220 320 260 310 300 320C260 360 250 420 260 480C220 500 180 510 140 520Z" fill="url(#leaf)"/>
+    <path d="M280 520C320 470 340 430 320 360C300 300 260 260 200 240C240 320 240 380 220 440C240 470 260 500 280 520Z" fill="#3A6954" opacity="0.75"/>
+  </g>
+</svg>
