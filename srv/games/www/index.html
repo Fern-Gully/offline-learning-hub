@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <title>LAN Arcade — Offline Learning Hub</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="/lan.css" />
   <style>
     :root {
       color-scheme: light;
@@ -85,7 +86,7 @@
     .brand-mark {
       width: 56px;
       height: 56px;
-      border-radius: 18px;
+      border-radius: 999px;
       display: grid;
       place-items: center;
       background: linear-gradient(140deg, rgba(58, 105, 84, 0.18), rgba(76, 145, 161, 0.18));
@@ -97,6 +98,7 @@
     .brand-mark img {
       width: 100%;
       height: auto;
+      border-radius: 999px;
     }
 
     .brand-copy {
@@ -235,7 +237,7 @@
       gap: 18px;
     }
 
-    a.card {
+    .game-card {
       display: grid;
       gap: 12px;
       padding: 18px;
@@ -248,8 +250,8 @@
       transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
     }
 
-    a.card:hover,
-    a.card:focus-visible {
+    .game-card:hover,
+    .game-card:focus-visible {
       transform: translateY(-6px);
       border-color: rgba(232, 126, 63, 0.6);
       box-shadow: 0 16px 32px rgba(34, 34, 34, 0.16);
@@ -332,7 +334,7 @@
     <div class="header-inner">
       <div class="brand-lockup">
         <div class="brand-mark">
-          <img src="/assets/logo/logo.png" alt="Offline Learning Hub placeholder logo" />
+          <img data-logo="header" src="/assets/logo/logo.png" alt="Offline Learning Hub placeholder logo" />
         </div>
         <div class="brand-copy">
           <p class="brand-overline">Offline Learning Hub</p>
@@ -357,22 +359,22 @@
     <section class="card-section">
       <div class="section-header"><span class="dot"></span>Top-level games</div>
       <div class="card-grid">
-        <a class="card" href="/games/2048/">
+        <a class="game-card" href="/games/2048/">
           <div class="thumb"><span class="badge">Arcade</span>2048</div>
           <div class="name">2048</div>
           <div class="path">/games/2048/</div>
         </a>
-        <a class="card" href="/games/hextris/">
+        <a class="game-card" href="/games/hextris/">
           <div class="thumb"><span class="badge">Arcade</span>hextris</div>
           <div class="name">hextris</div>
           <div class="path">/games/hextris/</div>
         </a>
-        <a class="card" href="/games/chromashift/">
+        <a class="game-card" href="/games/chromashift/">
           <div class="thumb"><span class="badge">Arcade</span>chromashift</div>
           <div class="name">Chromashift</div>
           <div class="path">/games/chromashift/</div>
         </a>
-        <a class="card" href="/games/fluxgrid/">
+        <a class="game-card" href="/games/fluxgrid/">
           <div class="thumb"><span class="badge">Arcade</span>fluxgrid</div>
           <div class="name">Fluxgrid</div>
           <div class="path">/games/fluxgrid/</div>
@@ -383,37 +385,37 @@
     <section class="card-section">
       <div class="section-header"><span class="dot"></span>TomMalbran pack</div>
       <div class="card-grid">
-        <a class="card" href="/games/tommalbran/puzzle/">
+        <a class="game-card" href="/games/tommalbran/puzzle/">
           <div class="thumb"><span class="badge">Puzzle</span>puzzle</div>
           <div class="name">puzzle</div>
           <div class="path">/games/tommalbran/puzzle/</div>
         </a>
-        <a class="card" href="/games/tommalbran/bounce/">
+        <a class="game-card" href="/games/tommalbran/bounce/">
           <div class="thumb"><span class="badge">Arcade</span>bounce</div>
           <div class="name">bounce</div>
           <div class="path">/games/tommalbran/bounce/</div>
         </a>
-        <a class="card" href="/games/tommalbran/snake/">
+        <a class="game-card" href="/games/tommalbran/snake/">
           <div class="thumb"><span class="badge">Classic</span>snake</div>
           <div class="name">snake</div>
           <div class="path">/games/tommalbran/snake/</div>
         </a>
-        <a class="card" href="/games/tommalbran/spider/">
+        <a class="game-card" href="/games/tommalbran/spider/">
           <div class="thumb"><span class="badge">Action</span>spider</div>
           <div class="name">spider</div>
           <div class="path">/games/tommalbran/spider/</div>
         </a>
-        <a class="card" href="/games/tommalbran/tetris/">
+        <a class="game-card" href="/games/tommalbran/tetris/">
           <div class="thumb"><span class="badge">Blocks</span>tetris</div>
           <div class="name">tetris</div>
           <div class="path">/games/tommalbran/tetris/</div>
         </a>
-        <a class="card" href="/games/tommalbran/defender/">
+        <a class="game-card" href="/games/tommalbran/defender/">
           <div class="thumb"><span class="badge">Arcade</span>defender</div>
           <div class="name">defender</div>
           <div class="path">/games/tommalbran/defender/</div>
         </a>
-        <a class="card" href="/games/tommalbran/pacman/">
+        <a class="game-card" href="/games/tommalbran/pacman/">
           <div class="thumb"><span class="badge">Classic</span>pacman</div>
           <div class="name">pacman</div>
           <div class="path">/games/tommalbran/pacman/</div>
@@ -424,47 +426,47 @@
     <section class="card-section">
       <div class="section-header"><span class="dot"></span>Board &amp; Puzzles</div>
       <div class="card-grid">
-        <a class="card" href="/games/chess/">
+        <a class="game-card" href="/games/chess/">
           <div class="thumb"><span class="badge">Board</span>♟ Chess</div>
           <div class="name">Chess</div>
           <div class="path">/games/chess/</div>
         </a>
-        <a class="card" href="/games/checkers/">
+        <a class="game-card" href="/games/checkers/">
           <div class="thumb"><span class="badge">Board</span>⛀ Checkers</div>
           <div class="name">Checkers</div>
           <div class="path">/games/checkers/</div>
         </a>
-        <a class="card" href="/games/nine-mens-morris/malom.html">
+        <a class="game-card" href="/games/nine-mens-morris/malom.html">
           <div class="thumb"><span class="badge">Board</span>● Nine Men’s Morris</div>
           <div class="name">Nine Men’s Morris</div>
           <div class="path">/games/nine-mens-morris/malom.html</div>
         </a>
-        <a class="card" href="/games/reversi/">
+        <a class="game-card" href="/games/reversi/">
           <div class="thumb"><span class="badge">Board</span>◐ Reversi</div>
           <div class="name">Reversi (Othello)</div>
           <div class="path">/games/reversi/</div>
         </a>
-        <a class="card" href="/games/connect4/">
+        <a class="game-card" href="/games/connect4/">
           <div class="thumb"><span class="badge">Board</span>➍ Connect Four</div>
           <div class="name">Connect Four</div>
           <div class="path">/games/connect4/</div>
         </a>
-        <a class="card" href="/games/minesweeper/">
+        <a class="game-card" href="/games/minesweeper/">
           <div class="thumb"><span class="badge">Puzzle</span>☀ Minesweeper</div>
           <div class="name">Minesweeper</div>
           <div class="path">/games/minesweeper/</div>
         </a>
-        <a class="card" href="/games/minesweeper-pro/">
+        <a class="game-card" href="/games/minesweeper-pro/">
           <div class="thumb"><span class="badge">Puzzle</span>💣 Minesweeper Pro</div>
           <div class="name">Minesweeper Pro</div>
           <div class="path">/games/minesweeper-pro/</div>
         </a>
-        <a class="card" href="/games/sudoku/">
+        <a class="game-card" href="/games/sudoku/">
           <div class="thumb"><span class="badge">Puzzle</span>⑨ Sudoku</div>
           <div class="name">Sudoku</div>
           <div class="path">/games/sudoku/</div>
         </a>
-        <a class="card" href="/games/tetris/">
+        <a class="game-card" href="/games/tetris/">
           <div class="thumb"><span class="badge">Blocks</span>▧ Tetris</div>
           <div class="name">Tetris</div>
           <div class="path">/games/tetris/</div>
@@ -475,17 +477,17 @@
     <section class="card-section">
       <div class="section-header"><span class="dot"></span>Word &amp; Puzzle Games</div>
       <div class="card-grid">
-        <a class="card" href="/games/wordsearch-pro/">
+        <a class="game-card" href="/games/wordsearch-pro/">
           <div class="thumb"><span class="badge">Word</span>🔎 Word Search Pro</div>
           <div class="name">Word Search (Offline)</div>
           <div class="path">/games/wordsearch-pro/</div>
         </a>
-        <a class="card" href="/games/crossword/">
+        <a class="game-card" href="/games/crossword/">
           <div class="thumb"><span class="badge">Word</span>🧩 Crossword</div>
           <div class="name">CrossBuilder (Offline)</div>
           <div class="path">/games/crossword/</div>
         </a>
-        <a class="card" href="/games/typinggame/">
+        <a class="game-card" href="/games/typinggame/">
           <div class="thumb"><span class="badge">Typing</span>⌨ Typing Game</div>
           <div class="name">Typing Trainer</div>
           <div class="path">/games/typinggame/</div>
@@ -496,7 +498,7 @@
     <section class="card-section">
       <div class="section-header"><span class="dot"></span>Adventures</div>
       <div class="card-grid">
-        <a class="card" href="/games/micro-rogue/">
+        <a class="game-card" href="/games/micro-rogue/">
           <div class="thumb"><span class="badge">Rogue</span>🗡️ Micro Rogue</div>
           <div class="name">Micro Rogue (Offline)</div>
           <div class="path">/games/micro-rogue/</div>
@@ -507,7 +509,7 @@
     <section class="card-section">
       <div class="section-header"><span class="dot"></span>Experiments &amp; Toys</div>
       <div class="card-grid">
-        <a class="card" href="/games/gravity-particle/">
+        <a class="game-card" href="/games/gravity-particle/">
           <div class="thumb"><span class="badge">Sim</span>🪐 Gravity Particles</div>
           <div class="name">Gravity Particle</div>
           <div class="path">/games/gravity-particle/</div>
@@ -518,22 +520,22 @@
     <section class="card-section">
       <div class="section-header"><span class="dot"></span>Originals &amp; Neon</div>
       <div class="card-grid">
-        <a class="card" href="/games/OrbitLoom/">
+        <a class="game-card" href="/games/OrbitLoom/">
           <div class="thumb"><span class="badge">Arcade</span>OrbitLoom</div>
           <div class="name">OrbitLoom</div>
           <div class="path">/games/OrbitLoom/</div>
         </a>
-        <a class="card" href="/games/Jumper-Neon-Skies/">
+        <a class="game-card" href="/games/Jumper-Neon-Skies/">
           <div class="thumb"><span class="badge">Platformer</span>Jumper-Neon-Skies</div>
           <div class="name">Jumper-Neon-Skies</div>
           <div class="path">/games/Jumper-Neon-Skies/</div>
         </a>
-        <a class="card" href="/games/Tower-Jumper-Neon-Skies/">
+        <a class="game-card" href="/games/Tower-Jumper-Neon-Skies/">
           <div class="thumb"><span class="badge">Platformer</span>Tower-Jumper-Neon-Skies</div>
           <div class="name">Tower-Jumper-Neon-Skies</div>
           <div class="path">/games/Tower-Jumper-Neon-Skies/</div>
         </a>
-        <a class="card" href="/games/space-odyssey/">
+        <a class="game-card" href="/games/space-odyssey/">
           <div class="thumb"><span class="badge">Arcade</span>🚀 Space Odyssey</div>
           <div class="name">Space Odyssey</div>
           <div class="path">/games/space-odyssey/</div>
