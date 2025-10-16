@@ -182,3 +182,149 @@ Currently the hub assumes the Raspberry Pi joins an existing network.  Future en
 ## License
 
 Provide licensing information for bundled games and assets as required by their original authors.  Many HTML5 games included here retain their upstream licenses inside their directories.
+
+## Raspberry Pi Offline Library (Kiwix + nginx) — Setup & Gotchas
+
+This walk-through reflects the real-world fixes we just made for older Raspberry Pi OS images shipping a legacy `kiwix-serve` build (2.x) that refuses `--bind`/`--library` and only accepts positional ZIM arguments. Follow these steps after the base deployment instructions above.
+
+### 0) Prerequisites
+
+```bash
+sudo apt update
+sudo apt install -y nginx avahi-daemon avahi-utils kiwix-tools
+sudo systemctl enable --now avahi-daemon
+```
+
+Set the hostname and ensure `/etc/hosts` matches:
+
+```bash
+sudo hostnamectl set-hostname library
+# edit /etc/hosts so it contains:
+# 127.0.1.1   library
+sudo systemctl restart avahi-daemon
+```
+
+Test name resolution from another device: `ping library.local`.
+
+### 1) Folder layout & permissions
+
+```bash
+sudo mkdir -p /srv/kiwix
+sudo chown -R www-data:www-data /srv/kiwix
+sudo chmod -R 755 /srv/kiwix
+```
+
+Copy ZIM archives into `/srv/kiwix/` (via `scp`, `rsync`, removable media, etc.).
+
+### 2) Kiwix service that always serves every ZIM
+
+Because we cannot rely on `--bind` or `--library`, we invoke `kiwix-serve` with positional ZIM paths inside a wrapper script so systemd stays compatible.
+
+Create the wrapper:
+
+```bash
+sudo tee /usr/local/bin/kiwix-start.sh >/dev/null <<'SH'
+#!/bin/bash
+# Serve every ZIM in /srv/kiwix on port 8080. Compatible with older kiwix-serve.
+exec >/srv/kiwix/kiwix.log 2>&1
+set -e
+cd /srv/kiwix
+export HOME=/srv/kiwix
+exec /usr/bin/kiwix-serve --port=8080 /srv/kiwix/*.zim
+SH
+sudo chmod +x /usr/local/bin/kiwix-start.sh
+sudo chown root:root /usr/local/bin/kiwix-start.sh
+```
+
+*(If the script was edited on Windows, normalise line endings with `sudo sed -i 's/$//' /usr/local/bin/kiwix-start.sh`.)*
+
+Systemd unit:
+
+```bash
+sudo tee /etc/systemd/system/kiwix.service >/dev/null <<'UNIT'
+[Unit]
+Description=Kiwix offline content server
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/kiwix
+Environment=HOME=/srv/kiwix
+ExecStart=/usr/local/bin/kiwix-start.sh
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now kiwix
+```
+
+Health checks:
+
+```bash
+sudo systemctl status kiwix --no-pager
+sudo ss -tlnp | grep 8080      # expect 0.0.0.0:8080 ... kiwix-serve
+curl -I http://localhost:8080
+```
+
+Browse from the LAN: `http://library.local:8080`.
+
+**Why this works:** older Pi packages choke on unsupported flags, and long `ExecStart` lines often break in systemd. The wrapper keeps things short and automatically serves any `*.zim` you drop in.
+
+### 3) nginx snippet (optional reverse proxy)
+
+```
+server {
+  listen 80 default_server;
+  listen [::]:80 default_server;
+  server_name library.local _;
+
+  root /var/www/html;
+  index index.html;
+
+  location = /games { return 301 /games/; }
+
+  location ^~ /games/ {
+    alias /srv/games/www/;
+    index index.html;
+    try_files $uri $uri/ /index.html;
+  }
+
+  location /kiwix/ {
+    proxy_pass http://127.0.0.1:8080/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
+}
+```
+
+Then reload: `sudo nginx -t && sudo systemctl reload nginx`.
+
+### 4) Copying ZIMs from WSL / Windows
+
+```bash
+scp /mnt/c/Users/<you>/Downloads/*.zim pi@library.local:~
+ssh pi@library.local 'sudo mv ~/*.zim /srv/kiwix/ && sudo chown www-data:www-data /srv/kiwix/*.zim'
+sudo systemctl restart kiwix
+```
+
+### 5) Troubleshooting quick checks
+
+* **Nothing on :8080** → `sudo systemctl status kiwix`, inspect `/srv/kiwix/kiwix.log`, and verify the listener with `sudo ss -tlnp | grep 8080`.
+* **Service exits immediately** → remove unsupported flags; start with a single ZIM to catch typos.
+* **`sudo: unable to resolve host`** → ensure `/etc/hosts` maps `127.0.1.1 library`.
+* **`library.local` unreachable on Windows** → install Apple Bonjour for mDNS support.
+
+### 6) Operational tips
+
+* Add ZIMs → copy into `/srv/kiwix/` → `sudo systemctl restart kiwix` (the glob picks them up).
+* On smaller Pis, constrain threads by editing the wrapper (e.g., add `--threads=2`).
+* Logs live at `/srv/kiwix/kiwix.log` and `journalctl -u kiwix`.
