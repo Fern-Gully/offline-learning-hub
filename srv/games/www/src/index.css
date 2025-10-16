@@ -1,0 +1,142 @@
+:root {
+  color-scheme: dark;
+  --bg: #050a1a;
+  --bg-alt: #0d1429;
+  --card: rgba(17, 25, 45, 0.82);
+  --card-hover: rgba(24, 34, 60, 0.92);
+  --border: rgba(88, 106, 146, 0.35);
+  --border-strong: rgba(59, 130, 246, 0.6);
+  --fg: #e7ebff;
+  --muted: #8f9bb8;
+  --accent: #3b82f6;
+  --accent-2: #8b5cf6;
+  --success: #22c55e;
+  --warning: #f97316;
+  --ring: rgba(59, 130, 246, 0.55);
+  --surface: rgba(10, 16, 35, 0.82);
+  --header-bg: linear-gradient(180deg, rgba(8, 12, 24, 0.85), rgba(8, 12, 24, 0.5));
+  --header-border: rgba(59, 130, 246, 0.15);
+  --brand-glyph-glow: rgba(59, 130, 246, 0.6);
+  --pill-bg: linear-gradient(135deg, rgba(24, 34, 60, 0.95), rgba(35, 46, 72, 0.8));
+  --pill-primary-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(139, 92, 246, 0.9));
+  --pill-primary-shadow: 0 16px 40px rgba(59, 130, 246, 0.28);
+  --pill-border-hover: rgba(148, 163, 184, 0.3);
+  --ghost-border: rgba(59, 130, 246, 0.3);
+  --ghost-border-hover: rgba(148, 163, 184, 0.55);
+  --hero-border: rgba(59, 130, 246, 0.15);
+  --hero-background: linear-gradient(160deg, rgba(11, 18, 36, 0.92), rgba(24, 36, 66, 0.78));
+  --hero-glow-a: rgba(59, 130, 246, 0.45);
+  --hero-glow-b: rgba(139, 92, 246, 0.32);
+  --filter-panel-bg: rgba(9, 14, 30, 0.75);
+  --filter-panel-border: rgba(59, 130, 246, 0.15);
+  --search-border: rgba(59, 130, 246, 0.25);
+  --search-bg: rgba(13, 18, 36, 0.8);
+  --card-border: rgba(59, 130, 246, 0.12);
+  --card-border-strong: rgba(59, 130, 246, 0.55);
+  --card-media-start: rgba(30, 41, 75, 0.95);
+  --card-media-end: rgba(51, 65, 110, 0.65);
+  --card-spark: rgba(59, 130, 246, 0.35);
+  --mobile-note-bg: rgba(13, 20, 38, 0.78);
+  --mobile-note-border: rgba(59, 130, 246, 0.25);
+  --empty-border: rgba(59, 130, 246, 0.4);
+  --footer-glow-a: rgba(59, 130, 246, 0.4);
+  --footer-glow-b: rgba(139, 92, 246, 0.35);
+  --glow-strong: rgba(59, 130, 246, 0.7);
+  --focus-ring-strong: rgba(59, 130, 246, 0.55);
+  --border-strong-soft: rgba(59, 130, 246, 0.35);
+  --card-shadow-hover: rgba(5, 10, 40, 0.6);
+  font-size: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background:
+    radial-gradient(1200px 700px at 0% -10%, rgba(59, 130, 246, 0.22), transparent 55%),
+    radial-gradient(900px 600px at 110% 20%, rgba(139, 92, 246, 0.18), transparent 55%),
+    radial-gradient(1200px 650px at 50% 110%, rgba(2, 132, 199, 0.16), transparent 60%),
+    linear-gradient(180deg, var(--bg), #030712 90%);
+  color: var(--fg);
+  background-attachment: fixed;
+}
+
+body[data-theme='fire'] {
+  --bg: #080403;
+  --bg-alt: #160804;
+  --card: rgba(32, 14, 8, 0.86);
+  --card-hover: rgba(44, 18, 10, 0.92);
+  --border: rgba(249, 115, 22, 0.35);
+  --border-strong: rgba(249, 115, 22, 0.65);
+  --border-strong-soft: rgba(249, 115, 22, 0.4);
+  --fg: #fff4eb;
+  --muted: #f0c7b0;
+  --accent: #f97316;
+  --accent-2: #fb923c;
+  --ring: rgba(249, 115, 22, 0.6);
+  --surface: rgba(26, 10, 6, 0.82);
+  --header-bg: linear-gradient(180deg, rgba(20, 8, 4, 0.88), rgba(20, 8, 4, 0.55));
+  --header-border: rgba(249, 115, 22, 0.25);
+  --brand-glyph-glow: rgba(249, 115, 22, 0.5);
+  --pill-bg: linear-gradient(135deg, rgba(40, 16, 8, 0.92), rgba(56, 22, 10, 0.8));
+  --pill-primary-bg: linear-gradient(135deg, rgba(249, 115, 22, 0.95), rgba(253, 186, 116, 0.9));
+  --pill-primary-shadow: 0 16px 40px rgba(249, 115, 22, 0.28);
+  --pill-border-hover: rgba(253, 186, 116, 0.42);
+  --ghost-border: rgba(249, 115, 22, 0.3);
+  --ghost-border-hover: rgba(253, 186, 116, 0.55);
+  --hero-border: rgba(249, 115, 22, 0.25);
+  --hero-background: linear-gradient(160deg, rgba(28, 10, 6, 0.95), rgba(50, 16, 6, 0.78));
+  --hero-glow-a: rgba(249, 115, 22, 0.4);
+  --hero-glow-b: rgba(253, 186, 116, 0.32);
+  --filter-panel-bg: rgba(32, 12, 6, 0.82);
+  --filter-panel-border: rgba(249, 115, 22, 0.28);
+  --search-border: rgba(249, 115, 22, 0.32);
+  --search-bg: rgba(40, 16, 8, 0.8);
+  --card-border: rgba(249, 115, 22, 0.22);
+  --card-border-strong: rgba(249, 115, 22, 0.6);
+  --card-media-start: rgba(68, 26, 10, 0.92);
+  --card-media-end: rgba(112, 42, 14, 0.68);
+  --card-spark: rgba(249, 115, 22, 0.35);
+  --mobile-note-bg: rgba(40, 16, 10, 0.86);
+  --mobile-note-border: rgba(249, 115, 22, 0.32);
+  --empty-border: rgba(249, 115, 22, 0.45);
+  --footer-glow-a: rgba(249, 115, 22, 0.45);
+  --footer-glow-b: rgba(253, 186, 116, 0.35);
+  --glow-strong: rgba(249, 115, 22, 0.65);
+  --focus-ring-strong: rgba(249, 115, 22, 0.55);
+  --card-shadow-hover: rgba(68, 26, 10, 0.65);
+  background:
+    radial-gradient(1100px 650px at 5% -10%, rgba(249, 115, 22, 0.25), transparent 55%),
+    radial-gradient(900px 600px at 110% 20%, rgba(253, 186, 116, 0.2), transparent 55%),
+    radial-gradient(1200px 650px at 50% 110%, rgba(124, 45, 18, 0.22), transparent 60%),
+    linear-gradient(180deg, var(--bg), #0b0502 90%);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  width: 100%;
+}
+
+a {
+  color: inherit;
+}
+
+button, input {
+  font: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
