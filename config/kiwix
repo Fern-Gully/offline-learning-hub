@@ -1,0 +1,16 @@
+server {
+    listen 80;
+    server_name library.local library;
+
+    # Optional: slightly larger buffers for big responses
+    proxy_buffering on;
+    proxy_buffers 16 16k;
+    proxy_busy_buffers_size 64k;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_redirect off;
+    }
+}
